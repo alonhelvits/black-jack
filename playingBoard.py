@@ -88,5 +88,7 @@ def board_detection(frame):
 
     corners = np.array([top_left_corner, top_right_corner, bottom_left_corner, bottom_right_corner])
 
+    #testtt
+
     return marked_frame
 
