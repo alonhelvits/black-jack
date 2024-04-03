@@ -2,6 +2,7 @@ import os
 import cv2
 import numpy as np
 import playingBoard
+import cards as cards_file
 
 def read_and_write_video():
     # Path to the recorded video file
@@ -60,7 +61,7 @@ def read_and_write_video():
 
 def read_from_video():
     # Path to the recorded video file
-    video_path = 'train_files/one_round_game.MOV'
+    video_path = 'scattered_cards_transformed.MOV'
 
     # Initialize the video capture object
     cap = cv2.VideoCapture(video_path)
@@ -70,7 +71,27 @@ def read_from_video():
         exit()
 
     playing_board = playingBoard.get_board(cap)
+    while True:
+        # Capture next frames
+        ret, frame = cap.read()
+        # Check if the frame is successfully captured
+        if not ret:
+            print("Error: Failed to capture frame")
+            break
 
+        # cv2.imshow("Transformed", frame)
+
+        # Transforming the new read image according to the transformation matrix
+        #transformed_board = cv2.warpPerspective(frame, playing_board.perspective_transform_matrix,(playing_board.width, playing_board.height))
+        cards, dealer_cards, players_cards, marked_cards_board = cards_file.Detect_cards(frame)
+        cv2.imshow("marked_cards_board", marked_cards_board)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    # Release the webcam and close all OpenCV windows
+    cap.release()
+    cv2.destroyAllWindows()
+    '''
     if playing_board is not None:
         print("Found the board!!")
         while True:
@@ -96,11 +117,11 @@ def read_from_video():
         cv2.destroyAllWindows()
     else:
         print("Fuck my life")
-
+    '''
 
 def read_video_from_iphone():
     # Open video capture device (change index if necessary, 0 is usually the default webcam)
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
 
     # Check if the capture device is opened successfully
     if not cap.isOpened():
@@ -121,9 +142,12 @@ def read_video_from_iphone():
     playing_board = playingBoard.get_board(cap)
 
     if playing_board is not None:
+        iter = 0
         print("Found the board!!")
         while True:
             #Capture next frames
+            if iter == 10:
+                iter = 0
             ret, frame = cap.read()
             # Check if the frame is successfully captured
             if not ret:
@@ -133,9 +157,9 @@ def read_video_from_iphone():
             # Transforming the new read image according to the transformation matrix
             transformed_board = cv2.warpPerspective(frame, playing_board.perspective_transform_matrix,
                                                     (playing_board.width, playing_board.height))
-
-            cv2.imshow("Transformed", transformed_board)
-
+            cards , dealer_cards, players_cards , marked_cards_board = cards_file.Detect_cards(transformed_board)
+            cv2.imshow("marked_cards_board", marked_cards_board)
+            iter += 1
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
         # Release the webcam and close all OpenCV windows
@@ -150,8 +174,8 @@ def playBlackJack():
     This function reads the video from the webcam cameras and starts the game
     """
     #read_and_write_video()
-    read_video_from_iphone()
-    #read_from_video()
+    #read_video_from_iphone()
+    read_from_video()
 
 
 if __name__ == '__main__':

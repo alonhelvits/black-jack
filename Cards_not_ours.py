@@ -32,8 +32,8 @@ SUIT_HEIGHT = 100
 RANK_DIFF_MAX = 2000
 SUIT_DIFF_MAX = 700
 
-CARD_MAX_AREA = 520000
-CARD_MIN_AREA = 5000
+CARD_MAX_AREA = 120000
+CARD_MIN_AREA = 25000
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 
@@ -344,13 +344,13 @@ def flattener(image, pts, w, h):
     # [top left, top right, bottom right, bottom left]
     # before doing the perspective transform
 
-    if w <= 0.7 * h:  # If card is vertically oriented
+    if w <= 0.8 * h:  # If card is vertically oriented
         temp_rect[0] = tl
         temp_rect[1] = tr
         temp_rect[2] = br
         temp_rect[3] = bl
 
-    if w >= 1.3 * h:  # If card is horizontally oriented
+    if w >= 1.2 * h:  # If card is horizontally oriented
         temp_rect[0] = bl
         temp_rect[1] = tl
         temp_rect[2] = tr

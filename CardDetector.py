@@ -13,6 +13,7 @@ import time
 import os
 import Cards_not_ours as Cards
 import VideoStream
+import playingBoard
 
 ### ---- INITIALIZATION ---- ###
 # Define constants and initialize variables
@@ -45,18 +46,89 @@ train_suits = Cards.load_suits(path + '/Card_Imgs/')
 ### ---- MAIN LOOP ---- ###
 # The main loop repeatedly grabs frames from the video stream
 # and processes them to find and identify playing cards.
+video_path = 'scattered_cards_transformed.MOV'
 
+# Initialize the video capture object
+cap = cv2.VideoCapture(video_path)
+# Check if the video capture object is opened successfully
+if not cap.isOpened():
+    print("Error: Failed to open video file")
+    exit()
+
+playing_board = playingBoard.get_board(cap)
+while True:
+    # Capture next frames
+    ret, frame = cap.read()
+    # Check if the frame is successfully captured
+    if not ret:
+        print("Error: Failed to capture frame")
+        break
+    pre_proc = Cards.preprocess_image(frame)
+
+    # Find and sort the contours of all cards in the image (query cards)
+    cnts_sort, cnt_is_card = Cards.find_cards(pre_proc)
+
+    # If there are no contours, do nothing
+    if len(cnts_sort) != 0:
+
+        # Initialize a new "cards" list to assign the card objects.
+        # k indexes the newly made array of cards.
+        cards = []
+        k = 0
+
+        # For each contour detected:
+        for i in range(len(cnts_sort)):
+            if (cnt_is_card[i] == 1):
+                # Create a card object from the contour and append it to the list of cards.
+                # preprocess_card function takes the card contour and contour and
+                # determines the cards properties (corner points, etc). It generates a
+                # flattened 200x300 image of the card, and isolates the card's
+                # suit and rank from the image.
+                cards.append(Cards.preprocess_card(cnts_sort[i], frame))
+
+                # Find the best rank and suit match for the card.
+                cards[k].best_rank_match, cards[k].best_suit_match, cards[k].rank_diff, cards[
+                    k].suit_diff = Cards.match_card(cards[k], train_ranks, train_suits)
+
+                # Draw center point and match result on the image.
+                frame = Cards.draw_results(frame, cards[k])
+                k = k + 1
+
+        # Draw card contours on image (have to do contours all at once or
+        # they do not show up properly for some reason)
+        if (len(cards) != 0):
+            temp_cnts = []
+            for i in range(len(cards)):
+                temp_cnts.append(cards[i].contour)
+            cv2.drawContours(frame, temp_cnts, -1, (255, 0, 0), 2)
+
+    # Draw framerate in the corner of the image. Framerate is calculated at the end of the main loop,
+    # so the first time this runs, framerate will be shown as 0.
+    cv2.putText(frame, "FPS: " + str(int(frame_rate_calc)), (10, 26), font, 0.7, (255, 0, 255), 2, cv2.LINE_AA)
+
+    # Finally, display the image with the identified cards!
+    cv2.imshow("Card Detector", frame)
+
+    # Poll the keyboard. If 'q' is pressed, exit the main loop.
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord("q"):
+        cam_quit = 1
+
+# Close all windows and close the PiCamera video stream.
+cv2.destroyAllWindows()
+videostream.stop()
+'''
 cam_quit = 0  # Loop control variable
 
 # Begin capturing frames
 while cam_quit == 0:
-
+    
     # Grab frame from video stream
     image = videostream.read()
 
     # Start timer (for calculating frame rate)
     t1 = cv2.getTickCount()
-
+    
     # Pre-process camera image (gray, blur, and threshold it)
     pre_proc = Cards.preprocess_image(image)
 
@@ -117,3 +189,4 @@ while cam_quit == 0:
 # Close all windows and close the PiCamera video stream.
 cv2.destroyAllWindows()
 videostream.stop()
+'''

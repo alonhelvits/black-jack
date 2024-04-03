@@ -9,7 +9,8 @@
       <change beforePath="$PROJECT_DIR$/CardDetector.py" beforeDir="false" afterPath="$PROJECT_DIR$/CardDetector.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Cards_not_ours.py" beforeDir="false" afterPath="$PROJECT_DIR$/Cards_not_ours.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cards.py" beforeDir="false" afterPath="$PROJECT_DIR$/cards.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/coins.py" beforeDir="false" afterPath="$PROJECT_DIR$/coins.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/playingBoard.py" beforeDir="false" afterPath="$PROJECT_DIR$/playingBoard.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -40,7 +41,7 @@
     &quot;settings.editor.selected.configurable&quot;: &quot;preferences.lookFeel&quot;
   }
 }</component>
-  <component name="RunManager" selected="Python.cards">
+  <component name="RunManager" selected="Python.main">
     <configuration name="CardDetector" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="black-jack" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -131,9 +132,9 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.CardDetector" />
         <item itemvalue="Python.cards" />
         <item itemvalue="Python.coins" />
-        <item itemvalue="Python.CardDetector" />
       </list>
     </recent_temporary>
   </component>
@@ -153,7 +154,15 @@
       <option name="project" value="LOCAL" />
       <updated>1711959119528</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="check">
+      <option name="closed" value="true" />
+      <created>1712146057535</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1712146057536</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -201,12 +210,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/cards.py</url>
-          <line>236</line>
-          <option name="timeStamp" value="6" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/cards.py</url>
-          <line>356</line>
+          <line>314</line>
           <option name="timeStamp" value="18" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -220,14 +224,14 @@
           <option name="timeStamp" value="31" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/cards.py</url>
-          <line>147</line>
-          <option name="timeStamp" value="68" />
+          <url>file://$PROJECT_DIR$/Cards_not_ours.py</url>
+          <line>232</line>
+          <option name="timeStamp" value="83" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/cards.py</url>
-          <line>105</line>
-          <option name="timeStamp" value="69" />
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>86</line>
+          <option name="timeStamp" value="84" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

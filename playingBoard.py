@@ -1,7 +1,7 @@
 import os
 import cv2
 import numpy as np
-import imutils
+#import imutils
 from copy import deepcopy
 import time
 
@@ -199,7 +199,7 @@ def get_board(cap):
 '''
 
 
-def get_board(cap, time_window=10, detection_threshold=0.5):
+def get_board(cap, time_window=2, detection_threshold=0.5):
     playing_board = None
     temp_playing_board = None
     start_time = time.time()
