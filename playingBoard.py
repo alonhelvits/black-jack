@@ -3,6 +3,8 @@ import cv2
 import numpy as np
 import imutils
 from copy import deepcopy
+import time
+
 
 
 class PlayingBoard:
@@ -84,10 +86,10 @@ def board_detection(frame):
     marked_frame = frame.copy()
     if board_contour is not None:
         cv2.drawContours(marked_frame, [most_significant_contour], -1, (0, 255, 0), 2)
+        cv2.imshow("Searching Board...", marked_frame)
         contour_points = board_contour.reshape(4, 2)
     else:
         return None
-
 
     # Finding the bottom left and top right corners
     sum_each_corner = np.sum(contour_points, axis=1)
@@ -121,8 +123,8 @@ def board_detection(frame):
     corners = np.array([top_left_corner, top_right_corner, bottom_left_corner, bottom_right_corner])
 
     # Define the width and height of the output image
-    width = 600
-    height = 400
+    width = 2400
+    height = 1600
 
     transformed_board, persp_matrix = board_transformation(corners, frame, height, width)
 
@@ -173,7 +175,7 @@ def board_transformation(corners, frame, height, width):
 
     return output_frame, matrix
 
-
+'''
 def get_board(cap):
     playing_board = None
 
@@ -194,7 +196,47 @@ def get_board(cap):
     else:
         print("Image wasn't found")
         return None
+'''
 
+
+def get_board(cap, time_window=10, detection_threshold=0.5):
+    playing_board = None
+    temp_playing_board = None
+    start_time = time.time()
+    detection_count = 0
+    frame_count = 0
+
+    while time.time() - start_time < time_window:
+        # Reading the frame from the camera
+        ret, frame = cap.read()
+        cv2.imshow('Name', frame)
+
+        # Trying to get the playing board:
+        temp_playing_board = board_detection(frame)
+
+        if temp_playing_board:
+            detection_count += 1
+            playing_board = deepcopy(temp_playing_board)
+            cv2.imshow("Searching for Boards...", playing_board.board_with_contour)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+        frame_count += 1
+    # Release the webcam and close all OpenCV windows
+    cv2.destroyAllWindows()
+
+    if detection_count / frame_count >= detection_threshold:
+        # Configure and display the contoured and transformed images if the playing surface was found
+        cnt_disp = deepcopy(playing_board.board_with_contour)
+        trans_disp = deepcopy(playing_board.transformed_board)
+        display(cnt_disp, trans_disp)
+        valid_surface = playing_board
+        cv2.destroyAllWindows()
+        return valid_surface
+    else:
+        print("Board wasn't found in at least 70% of the frames within the time window")
+        return None
 
 def display(contoured, transformed=np.array([])):
     # Arbitrary x, y offsets for displays
