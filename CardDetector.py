@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 import time
 import os
-import cards as Cards
+import Cards_not_ours as Cards
 import VideoStream
 
 ### ---- INITIALIZATION ---- ###
