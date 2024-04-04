@@ -321,7 +321,7 @@ def Detect_cards(input_image):
         #card.rank = match_card(card.rank_img,rank_templates)
         card.rank = classify_card_number(card.rank_img,rank_templates)
         # Draw contours on the original image
-        cv2.drawContours(marked_frame, [card.contour], -1, (0, 255, 0), 2)
+        cv2.drawContours(marked_frame, [card.contour], -1, (255, 0, 0), 3)
         cv2.putText(marked_frame, f"Rank: {card.rank}", (card.center[0], card.center[1]), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
     dealer_cards, player_cards = group_cards(cards, input_image)
