@@ -70,6 +70,8 @@ def read_from_video():
         print("Error: Failed to open video file")
         exit()
 
+    last_results = []  # List to store the last N results
+
     playing_board = playingBoard.get_board(cap)
     while True:
         # Capture next frames
@@ -84,8 +86,16 @@ def read_from_video():
         # Transforming the new read image according to the transformation matrix
         #transformed_board = cv2.warpPerspective(frame, playing_board.perspective_transform_matrix,(playing_board.width, playing_board.height))
         cards, dealer_cards, players_cards, marked_cards_board = cards_file.Detect_cards(frame)
-        cv2.imshow("marked_cards_board", marked_cards_board)
 
+        # Add the result to the list of last 2 results
+        last_results.append((cards, dealer_cards, players_cards))
+        last_results, is_consecutive_matches = check_consecutive_matches(last_results)
+
+        if is_consecutive_matches:
+            Petraro = "Gever" #temporary, you can remove it when Papo add his code
+            # add here Papo's code
+
+        cv2.imshow("marked_cards_board", marked_cards_board)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     # Release the webcam and close all OpenCV windows
@@ -177,6 +187,17 @@ def playBlackJack():
     #read_video_from_iphone()
     read_from_video()
 
+def check_consecutive_matches(last_results):
+    match_long = 2
+    if len(last_results) > match_long:
+        last_results.pop(0)  # Remove the oldest result
+
+    # Check if the last match_long results are the same
+    if len(last_results) == match_long and all(last_results[i] == last_results[0] for i in range(1, match_long)):
+        is_consecutive_matches = True
+    else:
+        is_consecutive_matches = False
+    return last_results, is_consecutive_matches
 
 if __name__ == '__main__':
     playBlackJack()
