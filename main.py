@@ -4,6 +4,10 @@ import numpy as np
 import playingBoard
 
 def read_and_write_video():
+    '''
+    This function reads the video from a given file and writes the transformed video to a file
+    :return:
+    '''
     # Path to the recorded video file
     video_path = 'train_files/one_round_game.MOV'
     output_video_path = 'train_files/one_round_game_transformed.mov'  # Path to save the output video
@@ -14,13 +18,6 @@ def read_and_write_video():
     if not cap.isOpened():
         print("Error: Failed to open video file")
         exit()
-
-    '''
-    # Initialize the webcam
-    cap = cv2.VideoCapture(0)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 9999)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 9999)
-    '''
 
     playing_board = playingBoard.get_board(cap)
 
@@ -58,9 +55,9 @@ def read_and_write_video():
         print("Fuck my life")
 
 
-def read_from_video():
+def read_from_video(video_path):
     # Path to the recorded video file
-    video_path = 'train_files/one_round_game.MOV'
+    #video_path = 'train_files/one_round_game.MOV'
 
     # Initialize the video capture object
     cap = cv2.VideoCapture(video_path)
@@ -151,9 +148,8 @@ def playBlackJack():
     """
     #read_and_write_video()
     read_video_from_iphone()
-    #read_from_video()
-
+    #read_from_video('train_files/no_masking_tape.mov')
+    #read_from_video('train_files/clear_background_2.MOV')
 
 if __name__ == '__main__':
     playBlackJack()
-
