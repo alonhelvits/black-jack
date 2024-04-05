@@ -80,6 +80,9 @@ def read_from_video(video_path):
         true_count = 0
         game_state_manager = player.GameState()
         decks_remaining = 2
+        previous_dealer_cards = []
+        previous_players_cards = [[], []]
+        previous_all_cards = []
 
         while True:
             # Capture next frames
@@ -101,13 +104,25 @@ def read_from_video(video_path):
                 cards, dealer_cards, players_cards, marked_cards_board = cards_file.Detect_cards(transformed_board)
 
                 # apply the game logic
-                game_image, running_count, true_count, game_state_manager, decks_remaining = player.process_game(
-                    dealer_cards, players_cards, marked_cards_board, running_count, true_count, game_state_manager,
-                    decks_remaining)
+                all_cards = dealer_cards + players_cards[0] + players_cards[1]
+                # no situation of fewer cards than previous should happen in the middle of the game, card is not detected
+                if len(previous_all_cards) > len(all_cards) > 0 and (
+                    game_state_manager.is_playing() or game_state_manager.is_result()):
+                        game_image, running_count, true_count, game_state_manager, decks_remaining = player.process_game(
+                        previous_dealer_cards, previous_players_cards, marked_cards_board, running_count, true_count, game_state_manager,
+                        decks_remaining)
+                else:
+                    game_image, running_count, true_count, game_state_manager, decks_remaining = player.process_game(
+                        dealer_cards, players_cards, marked_cards_board, running_count, true_count, game_state_manager,
+                        decks_remaining)
+                    # update previous cards, when normal game is running
+                    previous_dealer_cards = dealer_cards
+                    previous_players_cards = players_cards
+                    previous_all_cards = all_cards
+
+
                 new_width, new_height = 1200, 800
-
                 resized_image = cv2.resize(game_image, (new_width, new_height))
-
                 cv2.imshow("Detected Cards", resized_image)
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -168,19 +183,6 @@ def read_video_from_iphone():
         cv2.destroyAllWindows()
     else:
         print("Fuck my life")
-
-
-def check_consecutive_matches(last_results):
-    match_long = 3
-    if len(last_results) > match_long:
-        last_results.pop(0)  # Remove the oldest result
-
-    # Check if the last match_long results are the same
-    if len(last_results) == match_long and all(last_results[i] == last_results[0] for i in range(1, match_long)):
-        is_consecutive_matches = True
-    else:
-        is_consecutive_matches = False
-    return last_results, is_consecutive_matches
 
 
 def playBlackJack():
