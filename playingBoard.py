@@ -5,7 +5,7 @@ import imutils
 from copy import deepcopy
 import time
 
-
+BKG_THRESH = 60
 
 class PlayingBoard:
     """
@@ -50,27 +50,29 @@ def board_detection(frame):
     # Convert the frame to grayscale
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    # Apply Gaussian blur to reduce noise
+    # Apply Gaussian blur to the grayscale image to reduce noise
     blurred = cv2.bilateralFilter(gray, 11, 17, 17)
 
-    # Perform edge detection using Canny
-    edges = cv2.Canny(blurred, 50, 150)
+    # Perform adaptive thresholding
+    img_w, img_h = np.shape(frame)[:2]
+    # Find the most common pixel value in the image to use as the background level
+    bkg_level = np.bincount(frame.ravel()).argmax()
+    thresh_level = bkg_level + BKG_THRESH
+
+    thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 7, 2)
 
     # Find contours in the edge-detected image
-    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    '''
-    # Draw contours on the original frame
-    marked_frame = frame.copy()
-    cv2.drawContours(marked_frame, contours, -1, (0, 255, 0), 2)
-    '''
+    contours, _ = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    # Sort the contours by area in descending order
     contours = sorted(contours, key=cv2.contourArea, reverse=True)[:5]
 
     # Find the closed contour with the largest length
     max_length = 0
     most_significant_contour = None
-    epsilon = 0.02
+    epsilon = 0.01
     board_contour = None
 
+    four_edge_cont = []
     for contour in contours:
         length = cv2.arcLength(contour, True)
         curr_cnt = cv2.approxPolyDP(contour, epsilon=(epsilon*length), closed=True)
@@ -79,14 +81,16 @@ def board_detection(frame):
             max_length = length
             most_significant_contour = contour
             board_contour = curr_cnt
+            four_edge_cont.append(curr_cnt)
             break
-
 
     # Draw the most significant contour on the original frame
     marked_frame = frame.copy()
     if board_contour is not None:
         cv2.drawContours(marked_frame, [most_significant_contour], -1, (0, 255, 0), 2)
-        cv2.imshow("Searching Board...", marked_frame)
+        new_width, new_height = 1200, 800
+        resized_image = cv2.resize(marked_frame, (new_width, new_height))
+        cv2.imshow("Searching Board...", resized_image)
         contour_points = board_contour.reshape(4, 2)
     else:
         return None
@@ -199,7 +203,7 @@ def get_board(cap):
 '''
 
 
-def get_board(cap, time_window=10, detection_threshold=0.5):
+def get_board(cap, time_window=7, detection_threshold=0.5):
     playing_board = None
     temp_playing_board = None
     start_time = time.time()
@@ -209,7 +213,7 @@ def get_board(cap, time_window=10, detection_threshold=0.5):
     while time.time() - start_time < time_window:
         # Reading the frame from the camera
         ret, frame = cap.read()
-        cv2.imshow('Name', frame)
+        #cv2.imshow('Name', frame)
 
         # Trying to get the playing board:
         temp_playing_board = board_detection(frame)
@@ -217,7 +221,9 @@ def get_board(cap, time_window=10, detection_threshold=0.5):
         if temp_playing_board:
             detection_count += 1
             playing_board = deepcopy(temp_playing_board)
-            cv2.imshow("Searching for Boards...", playing_board.board_with_contour)
+            #cv2.imshow("Searching for Boards...", playing_board.board_with_contour)
+            if (detection_count > 20) and (detection_count / frame_count >= detection_threshold):
+                break
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -244,11 +250,12 @@ def display(contoured, transformed=np.array([])):
     y_offset = 50
 
     # Original image with the contour of the playing surface overlayed
-    cv2.imshow('Contoured', contoured)
-    cv2.moveWindow("Original", x_offset, y_offset)
+    #cv2.imshow('Contoured', contoured)
+    # cv2.moveWindow("Original", x_offset, y_offset)
 
     # Only show the transformed surface if it exists (given to function implies existence)
     if bool(transformed.any()):
         # Transformed playing surface
-        cv2.imshow("Transformed", transformed)
+        #cv2.imshow("Transformed", transformed)
+        pass
     return

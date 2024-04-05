@@ -1,3 +1,6 @@
+import cv2
+
+
 class Participant:
     """Base class for both Players and the Dealer, to inherit common attributes and methods."""
 
@@ -15,14 +18,17 @@ class Participant:
     def calculate_value(self):
         """Calculate the value of the hand, adjusting for aces as necessary."""
         self.value, self.aces = 0, 0
+        card_values = {
+            "One": 1, "Two": 2, "Three": 3, "Four": 4, "Five": 5,
+            "Six": 6, "Seven": 7, "Eight": 8, "Nine": 9, "Ten": 10,
+            "Jack": 10, "Queen": 10, "King": 10, "Ace": 11
+        }
         for card in self.hand:
-            if card in ['J', 'Q', 'K']:
-                self.value += 10
-            elif card == 'A':
-                self.value += 11
-                self.aces += 1
-            else:
-                self.value += int(card)
+            if card in card_values:
+                self.value += card_values[card]
+                if card == "A":
+                    self.aces += 1
+
         self.adjust_for_aces()
 
     def adjust_for_aces(self):
@@ -40,6 +46,30 @@ class Dealer(Participant):
 class Player(Participant):
     """Represents a player in the game."""
     pass
+
+
+def create_game(dealer_cards, players_cards):
+    """
+    Create a game setup with one dealer and two players.
+
+    Parameters:
+    - dealer_cards: List of strings representing the dealer's card values.
+    - players_cards: List of two lists, each representing a player's card values.
+
+    Returns:
+    A tuple containing the dealer and the two players as objects.
+    """
+
+    # Create dealer instance and set hand
+    dealer = Dealer()
+    dealer.set_hand(dealer_cards)
+
+    # Create player instances and set hands
+    players = [Player() for _ in range(2)]  # Adjust if you need more or fewer players
+    for player, cards in zip(players, players_cards):
+        player.set_hand(cards)
+
+    return dealer, players
 
 
 class GameState:
@@ -70,40 +100,37 @@ class GameState:
         return self.current_state == "result"
 
 
-def basic_strategy(player_hand, dealer_card):
+def basic_strategy(player, dealer):
     """Suggest the best action (hit or stand) based on the basic blackjack strategy."""
-    player_value = sum([10 if card in ['J', 'Q', 'K'] else 11 if card == 'A' else int(card) for card in player_hand])
-    player_aces = player_hand.count('A')
-    dealer_value = 10 if dealer_card in ['J', 'Q', 'K'] else 11 if dealer_card == 'A' else int(dealer_card)
 
     # Adjust for Ace
-    while player_value > 21 and player_aces:
-        player_value -= 10
-        player_aces -= 1
+    while player.value > 21 and player.aces:
+        player.value -= 10
+        player.aces -= 1
 
     # Simple Basic Strategy Logic
-    if player_value >= 17:  # Stand on 17 or higher
+    if player.value >= 17:  # Stand on 17 or higher
         return 'Stand'
-    elif player_value <= 11:  # Always hit 11 or less
+    elif player.value <= 11:  # Always hit 11 or less
         return 'Hit'
-    elif player_value == 12 and dealer_value >= 4 and dealer_value <= 6:  # Stand if dealer shows 4-6, otherwise hit
+    elif player.value == 12 and 4 <= dealer.value <= 6:  # Stand if dealer shows 4-6, otherwise hit
         return 'Stand'
-    elif 13 <= player_value <= 16 and dealer_value >= 2 and dealer_value <= 6:  # Stand if dealer shows 2-6, otherwise hit
+    elif 13 <= player.value <= 16 and 2 <= dealer.value <= 6:  # Stand if dealer shows 2-6, otherwise hit
         return 'Stand'
     else:
         return 'Hit'
 
 
-def update_count(cards):
-    global running_count
-    count_values = {'2': 1, '3': 1, '4': 1, '5': 1, '6': 1, '7': 0, '8': 0, '9': 0, '10': -1, 'J': -1, 'Q': -1, 'K': -1,
-                    'A': -1}
+def update_count(cards, running_count):
+    count_values = {'One': 1, 'Two': 1, 'Three': 1, 'Four': 1, 'Five': 1, 'Six': 1, 'Seven': 0, 'Eight': 0, 'Nine': 0,
+                    'Ten': -1, 'Jack': -1, 'Queen': -1, 'King': -1,
+                    'Ace': -1}
     for card in cards:
         running_count += count_values.get(card, 0)
+    return running_count
 
 
-def calculate_true_count():
-    decks_remaining = max(decks_in_shoe - (len(detected_cards) / 52), 0.5)  # Avoid division by zero
+def calculate_true_count(decks_remaining, running_count):
     return running_count / decks_remaining
 
 
@@ -118,131 +145,192 @@ def bet_suggestion(true_count):
         return "Bet as much as you're comfortable with - the count is high!"
 
 
-def print_results(dealer, players):
-    print(f"Dealer's Hand: {dealer.hand}, Value: {dealer.value}")
-    for player in players:
-        result = ""
-        if player.value > 21:
-            result = "Busted"
-        elif dealer.value > 21 or player.value > dealer.value:
-            result = "Won"
-        elif player.value == dealer.value:
-            result = "Push"
-        else:
-            result = "Lost"
-        print(f"Player's Hand: {player.hand}, Value: {player.value}, Result: {result}")
+def game_results(dealer, player):
+    result = ""
+    if player.value > 21:
+        result = "Busted"
+    elif dealer.value > 21 or player.value > dealer.value:
+        result = "Won"
+    elif player.value == dealer.value:
+        result = "Push"
+    else:
+        result = "Lost"
+    return result
 
 
-def process_game(dealer, players):
-    global running_count, game_state_manager
-    # dealer is an instance of the Dealer class, players is a list of Player instances
-    # Detected no cards, potentially transitioning to the betting phase.
+def process_game(dealer_cards, players_cards, input_image, running_count, true_count, game_state_manager,
+                 decks_remaining):
+    dealer, players = create_game(dealer_cards, players_cards)
+    game_image = input_image.copy()
+
+    # configure the text drawing parameters
+    height, width = input_image.shape[:2]
+
+    # Center of the image
+    center_x = int(round(width / 2))
+    center_y = int(round(height / 2))
+    center_of_image = (center_x, center_y)
+
+    # Close to the bottom edge, center of the left side
+    bottom_left_center_x = (width * 0.1) - 150  # Assuming 10% from the left is "center" of the left side
+    bottom_left_center_y = height * 0.9 + 30  # Close to the bottom edge
+    bottom_left_center_position = (int(bottom_left_center_x), int(bottom_left_center_y))
+
+    # Close to the bottom edge, center of the right side
+    bottom_right_center_x = (width * 0.9) - 600  # Assuming 10% from the right edge
+    bottom_right_center_y = height * 0.9 + 30  # Close to the bottom edge
+    bottom_right_center_position = (int(bottom_right_center_x), int(bottom_right_center_y))
+
+    # Center of x axis, 60% towards up of y axis
+    center_x_up_x = width / 2
+    center_x_up_y = height * 0.6  # 60% down from the top
+    center_x_up_position = (center_x_up_x, center_x_up_y)
+
+    font = cv2.FONT_HERSHEY_SIMPLEX
+
+    # Phase handling logic
+
     if (not players or all(not player.hand for player in players)) and (not dealer or not dealer.hand):
-        # Only transition to betting if previously in the result state, and reset count flag.
         if game_state_manager.is_result():
             game_state_manager.transition_to_betting()
-            true_count = calculate_true_count()
-            print("Running count is:", running_count)
-            print("True count is:", true_count)
-            print("detected cards:", detected_cards)
-            print(bet_suggestion(true_count))
+            true_count = calculate_true_count(decks_remaining, running_count)
+            bet_suggestion_text = bet_suggestion(true_count)
+
+            cv2.putText(game_image, "Betting Phase",
+                        (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 25)
+            cv2.putText(game_image, "Betting Phase",
+                        (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
+            cv2.putText(game_image, f"Running count: {running_count}",
+                        (center_of_image[0] - 270, center_of_image[1] + 90),
+                        font, 2, (255, 255, 255), 25)
+            cv2.putText(game_image, f"Running count: {running_count}",
+                        (center_of_image[0] - 270, center_of_image[1] + 90),
+                        font, 2, (0, 0, 0), 8)
+            cv2.putText(game_image, f"True count: {true_count}",
+                        (center_of_image[0] - 270, center_of_image[1] + 120),
+                        font, 2, (255, 255, 255), 25)
+            cv2.putText(game_image, f"True count: {true_count}",
+                        (center_of_image[0] - 270, center_of_image[1] + 120),
+                        font, 2, (0, 0, 0), 8)
+            cv2.putText(game_image, f"Bet Suggestion: {bet_suggestion_text}",
+                        (center_of_image[0] - 270, center_of_image[1] + 150),
+                        font, 2, (255, 255, 255), 25)
+            cv2.putText(game_image, f"Bet Suggestion: {bet_suggestion_text}",
+                        (center_of_image[0] - 270, center_of_image[1] + 150),
+                        font, 2, (0, 0, 0), 8)
+
         elif game_state_manager.is_betting():
-            # If already in betting phase, no need to reset the flag or transition.
             if running_count != 0:
-                true_count = calculate_true_count()
-                print(bet_suggestion(true_count))
-        else:
-            pass
+                true_count = calculate_true_count(decks_remaining, running_count)
+                bet_suggestion_text = bet_suggestion(true_count)
 
+                cv2.putText(game_image, "Betting Phase",
+                            (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 25)
+                cv2.putText(game_image, "Betting Phase",
+                            (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
+                cv2.putText(game_image, f"Running count: {running_count}",
+                            (center_of_image[0] - 270, center_of_image[1] + 90),
+                            font, 2, (255, 255, 255), 25)
+                cv2.putText(game_image, f"Running count: {running_count}",
+                            (center_of_image[0] - 270, center_of_image[1] + 90),
+                            font, 2, (0, 0, 0), 8)
+                cv2.putText(game_image, f"True count: {true_count}",
+                            (center_of_image[0] - 270, center_of_image[1] + 180),
+                            font, 2, (255, 255, 255), 25)
+                cv2.putText(game_image, f"True count: {true_count}",
+                            (center_of_image[0] - 270, center_of_image[1] + 180),
+                            font, 2, (0, 0, 0), 8)
+                cv2.putText(game_image, f"Bet Suggestion: {bet_suggestion_text}",
+                            (center_of_image[0] - 270, center_of_image[1] + 270),
+                            font, 2, (255, 255, 255), 25)
+                cv2.putText(game_image, f"Bet Suggestion: {bet_suggestion_text}",
+                            (center_of_image[0] - 270, center_of_image[1] + 270),
+                            font, 2, (0, 0, 0), 8)
+            else:
+                cv2.putText(game_image, "Initial Betting Phase",
+                            (center_of_image[0] - 400, center_of_image[1]), font, 3, (255, 255, 255), 25)
+                cv2.putText(game_image, "Initial Betting Phase",
+                            (center_of_image[0] - 400, center_of_image[1]), font, 3, (0, 0, 0), 8)
+                cv2.putText(game_image, f"Running count: {running_count}",
+                            (center_of_image[0] - 270, center_of_image[1] + 90),
+                            font, 2, (255, 255, 255), 25)
+                cv2.putText(game_image, f"Running count: {running_count}",
+                            (center_of_image[0] - 270, center_of_image[1] + 90),
+                            font, 2, (0, 0, 0), 8)
 
-    # Detected cards and potentially in the playing phase.
-    elif len(dealer.hand) == 1:
-        game_state_manager.transition_to_playing()
-        dealer_card = dealer.hand[0]
-        for player in players:
-            action = basic_strategy(player.hand, dealer_card)
-            print(f"Player's Hand: {player.hand}, Dealer's Card: {dealer_card}, Recommended Action: {action}")
+        # Additional conditions for betting phase can be added here
 
-    # Detected more than one card in the dealer's hand, potentially in the result phase.
-    elif len(dealer.hand) > 1:
+    elif "Covered" in dealer.hand:
         dealer.calculate_value()
-        # Ensure the transition to result state happens only once dealer's drawing is complete.
+        players[0].calculate_value()
+        players[1].calculate_value()
+        game_state_manager.transition_to_playing()
+        cv2.putText(game_image, "Playing Phase",
+                    (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 25)
+        cv2.putText(game_image, "Playing Phase",
+                    (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
+
+        # calculate basic strategy for each player, and display the recommended action
+        if players[0].hand:
+            action = basic_strategy(players[0], dealer)
+            player_text = f"Hand: {players[0].value}, Action: {action}"
+
+            cv2.putText(game_image, player_text,
+                        bottom_left_center_position, font, 2, (255, 255, 255), 25)
+            cv2.putText(game_image, player_text,
+                        bottom_left_center_position, font, 2, (0, 0, 0), 8)
+
+        if players[1].hand:
+            action = basic_strategy(players[1], dealer)
+            player_text = f"Hand: {players[1].value}, Action: {action}"
+
+            cv2.putText(game_image, player_text,
+                        bottom_right_center_position, font, 2, (255, 255, 255), 25)
+            cv2.putText(game_image, player_text,
+                        bottom_right_center_position, font, 2, (0, 0, 0), 8)
+
+
+    elif len(dealer.hand) >= 2 and "Covered" not in dealer.hand:
+        dealer.calculate_value()
         if dealer.value >= 17:
             game_state_manager.transition_to_result()
-            # Update the count only once after dealer finishes drawing and before the next round starts.
+            cv2.putText(game_image, "Result Phase",
+                        (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 25)
+            cv2.putText(game_image, "Result Phase",
+                        (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
+
+            if players[0].hand:
+                players[0].calculate_value()
+                result = game_results(dealer, players[0])
+                player_text = f"Result: {result}"
+                cv2.putText(game_image, player_text,
+                            bottom_left_center_position, font, 2, (255, 255, 255), 25)
+                cv2.putText(game_image, player_text,
+                            bottom_left_center_position, font, 2, (0, 0, 0), 8)
+
+            if players[1].hand:
+                players[1].calculate_value()
+                result = game_results(dealer, players[1])
+                player_text = f"Result: {result}"
+                cv2.putText(game_image, player_text,
+                            bottom_right_center_position, font, 2, (255, 255, 255), 25)
+                cv2.putText(game_image, player_text,
+                            bottom_right_center_position, font, 2, (0, 0, 0), 8)
+
             if not game_state_manager.count_updated_this_round:
                 all_cards = sum([player.hand for player in players], []) + dealer.hand
-                update_count(all_cards)
-                detected_cards.extend(all_cards)
-                game_state_manager.count_updated_this_round = True  # Ensure count is updated only once per round.
+                running_count = update_count(all_cards, running_count)
+                decks_remaining = max(2 - (len(all_cards) / 52), 0.5)
+                game_state_manager.count_updated_this_round = True
 
-            # Display results.
-            print_results(dealer, players)
         else:
-            print("Dealer still drawing cards..."")
+            cv2.putText(game_image, "Dealer Drawing....",
+                        (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 25)
+            cv2.putText(game_image, "Dealer Drawing....",
+                        (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
 
-    else:  # Handle transitional states or unexpected conditions. ???
+    # Handle any other unexpected state
+    else:
         pass
 
-
-# Card Counting Variables
-running_count = 0
-decks_in_shoe = 2  # Example for a game with two decks
-game_state_manager = GameState()
-dealer = Dealer()
-players = [Player(), Player()]
-detected_cards = []
-
-# Assuming detected_cards is used within calculate_true_count and update_count,
-# Initialize it as empty for the betting phase
-
-process_game(dealer, players)
-print("--------------------------------------------------")
-
-dealer.set_hand(['K'])
-players[0].set_hand(['5', '6'])
-players[1].set_hand(['A', '2'])
-process_game(dealer, players)
-print("--------------------------------------------------")
-
-dealer.set_hand(['K', '7'])  # Dealer now has cards sug
-players[0].set_hand(['5', '6'])  # Players' hands remain unchanged from the playing phase
-players[1].set_hand(['A', '2'])
-process_game(dealer, players)
-print("--------------------------------------------------")
-
-dealer.set_hand([])  # Dealer now has cards sug
-players[0].set_hand([])  # Players' hands remain unchanged from the playing phase
-players[1].set_hand([])
-process_game(dealer, players)
-print("--------------------------------------------------")
-
-dealer.set_hand(['8'])  # Dealer now has cards sug
-players[0].set_hand(['5', '6'])  # Players' hands remain unchanged from the playing phase
-players[1].set_hand(['A', '9'])
-process_game(dealer, players)
-print("--------------------------------------------------")
-
-dealer.set_hand(['8'])  # Dealer now has cards sug
-players[0].set_hand(['5', '6', '6'])  # Players' hands remain unchanged from the playing phase
-players[1].set_hand(['A', '9'])
-process_game(dealer, players)
-print("--------------------------------------------------")
-
-dealer.set_hand(['8', '7'])  # Dealer now has cards sug
-players[0].set_hand(['5', '6', '6'])  # Players' hands remain unchanged from the playing phase
-players[1].set_hand(['A', '9'])
-process_game(dealer, players)
-print("--------------------------------------------------")
-
-dealer.set_hand(['8', '7', '5'])  # Dealer now has cards sug
-players[0].set_hand(['5', '6', '6'])  # Players' hands remain unchanged from the playing phase
-players[1].set_hand(['A', '9'])
-process_game(dealer, players)
-print("--------------------------------------------------")
-
-dealer.set_hand([])  # Dealer now has cards sug
-players[0].set_hand([])  # Players' hands remain unchanged from the playing phase
-players[1].set_hand([])
-process_game(dealer, players)
-print("--------------------------------------------------")
+    return game_image, running_count, true_count, game_state_manager, decks_remaining
