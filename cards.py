@@ -34,7 +34,7 @@ def find_cards(image):
     covered_card_template = cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
 
     BKG_THRESH = 80
-    CARD_THRESH = 19 #lower threshold - more sensitive to light digits (white level - thresh)
+    CARD_THRESH = 21 #lower threshold - more sensitive to light digits (white level - thresh)
 
     # Width and height of card corner, where rank and suit are
     CORNER_WIDTH = 32
@@ -169,7 +169,7 @@ def classify_card_number(card_rank_image, rank_templates):
     best_match_name = "Unknown"
     best_match_diff = 4000  # Initialize with a large value
 
-    if card_rank_image == "Covered":
+    if type(card_rank_image) == str:
         best_match_name = "Covered"
     else:
         # Iterate over rank templates
@@ -337,14 +337,14 @@ def Detect_cards(input_image):
         if card.rank == "Covered":
             # Outline
             cv2.putText(marked_frame, "Covered", (card.center[0] - 50, card.center[1]), cv2.FONT_HERSHEY_SIMPLEX,
-                        1.2, (0, 0, 0), 8)
+                        1.2, (0, 0, 0), 16)
             # Main text
             cv2.putText(marked_frame, "Covered", (card.center[0] - 50, card.center[1]), cv2.FONT_HERSHEY_SIMPLEX,
                         1.2, (255, 255, 255), 2)
         else:
             # Outline
             cv2.putText(marked_frame, f"{card.rank}", (card.center[0] - 50, card.center[1]),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 0), 8)
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 0), 16)
             # Main text
             cv2.putText(marked_frame, f"{card.rank}", (card.center[0] - 50, card.center[1]),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)

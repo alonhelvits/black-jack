@@ -26,7 +26,7 @@ class Participant:
         for card in self.hand:
             if card in card_values:
                 self.value += card_values[card]
-                if card == "A":
+                if card == "Ace":
                     self.aces += 1
 
         self.adjust_for_aces()
@@ -110,9 +110,11 @@ def basic_strategy(player, dealer):
         player.aces -= 1
 
     # Simple Basic Strategy Logic
-    if player.value == 21:  # Always stand on 21
+    if player.value > 21:  # Busted already
+        return 'Busted..'
+    elif player.value == 21:  # Always stand on 21
         return 'BlackJack!'
-    elif player.value >= 17:  # Stand on 17 or higher
+    elif 17 <= player.value <= 20:  # Stand on 17 or higher
         return 'Stand'
     elif player.value <= 11:  # Always hit 11 or less
         return 'Hit'
@@ -182,7 +184,7 @@ def process_game(dealer_cards, players_cards, input_image, running_count, true_c
     bottom_left_center_position = (int(bottom_left_center_x), int(bottom_left_center_y))
 
     # Close to the bottom edge, center of the right side
-    bottom_right_center_x = (width * 0.9) - 600  # Assuming 10% from the right edge
+    bottom_right_center_x = (width * 0.9) - 700  # Assuming 10% from the right edge
     bottom_right_center_y = height * 0.9 + 70  # Close to the bottom edge
     bottom_right_center_position = (int(bottom_right_center_x), int(bottom_right_center_y))
 
@@ -288,15 +290,17 @@ def process_game(dealer_cards, players_cards, input_image, running_count, true_c
                     (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
 
         cv2.putText(game_image, f"Dealer's Card: {dealer.value}",
-                    (center_of_image[0] - 200, center_of_image[1] - 200), font, 2, (255, 255, 255), 25)
+                    (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (255, 255, 255), 25)
         cv2.putText(game_image, f"Dealer's Card: {dealer.value}",
-                    (center_of_image[0] - 200, center_of_image[1] - 200), font, 2, (0, 0, 0), 8)
+                    (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (0, 0, 0), 8)
 
         # calculate basic strategy for each player, and display the recommended action
         if players[0].hand:
             action = basic_strategy(players[0], dealer)
-            player_text = f"Hand: {players[0].value}, {action}"
-
+            if players[0].aces != 0 and players[0].value <= 21:
+                player_text = f"Hand: {players[0].value} / {players[0].value - 10}, {action}"
+            else:
+                player_text = f"Hand: {players[0].value}, {action}"
             cv2.putText(game_image, player_text,
                         bottom_left_center_position, font, 2, (255, 255, 255), 25)
             cv2.putText(game_image, player_text,
@@ -304,7 +308,10 @@ def process_game(dealer_cards, players_cards, input_image, running_count, true_c
 
         if players[1].hand:
             action = basic_strategy(players[1], dealer)
-            player_text = f"Hand: {players[1].value}, {action}"
+            if players[1].aces != 0 and players[1].value <= 21:
+                player_text = f"Hand: {players[1].value} / {players[1].value - 10}, {action}"
+            else:
+                player_text = f"Hand: {players[1].value}, {action}"
 
             cv2.putText(game_image, player_text,
                         bottom_right_center_position, font, 2, (255, 255, 255), 25)
@@ -316,9 +323,9 @@ def process_game(dealer_cards, players_cards, input_image, running_count, true_c
         dealer.calculate_value()
         if dealer.value >= 17:
             cv2.putText(game_image, f"Dealer's Hand: {dealer.value}",
-                        (center_of_image[0] - 200, center_of_image[1] - 200), font, 2, (255, 255, 255), 25)
+                        (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (255, 255, 255), 25)
             cv2.putText(game_image, f"Dealer's Hand: {dealer.value}",
-                        (center_of_image[0] - 200, center_of_image[1] - 200), font, 2, (0, 0, 0), 8)
+                        (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (0, 0, 0), 8)
             game_state_manager.transition_to_result()
             cv2.putText(game_image, "Result Phase",
                         (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 25)
@@ -364,6 +371,10 @@ def process_game(dealer_cards, players_cards, input_image, running_count, true_c
                         (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 25)
             cv2.putText(game_image, "Dealer Drawing....",
                         (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
+            cv2.putText(game_image, f"Dealer's Hand: {dealer.value}",
+                        (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (255, 255, 255), 25)
+            cv2.putText(game_image, f"Dealer's Hand: {dealer.value}",
+                        (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (0, 0, 0), 8)
 
     # Handle any other unexpected state
     else:
