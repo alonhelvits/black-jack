@@ -88,7 +88,9 @@ def board_detection(frame):
     marked_frame = frame.copy()
     if board_contour is not None:
         cv2.drawContours(marked_frame, [most_significant_contour], -1, (0, 255, 0), 2)
-        cv2.imshow("Searching Board...", marked_frame)
+        new_width, new_height = 1200, 800
+        resized_image = cv2.resize(marked_frame, (new_width, new_height))
+        cv2.imshow("Searching Board...", resized_image)
         contour_points = board_contour.reshape(4, 2)
     else:
         return None
@@ -211,7 +213,7 @@ def get_board(cap, time_window=7, detection_threshold=0.5):
     while time.time() - start_time < time_window:
         # Reading the frame from the camera
         ret, frame = cap.read()
-        cv2.imshow('Name', frame)
+        #cv2.imshow('Name', frame)
 
         # Trying to get the playing board:
         temp_playing_board = board_detection(frame)
@@ -219,7 +221,7 @@ def get_board(cap, time_window=7, detection_threshold=0.5):
         if temp_playing_board:
             detection_count += 1
             playing_board = deepcopy(temp_playing_board)
-            cv2.imshow("Searching for Boards...", playing_board.board_with_contour)
+            #cv2.imshow("Searching for Boards...", playing_board.board_with_contour)
             if (detection_count > 20) and (detection_count / frame_count >= detection_threshold):
                 break
 
@@ -248,11 +250,12 @@ def display(contoured, transformed=np.array([])):
     y_offset = 50
 
     # Original image with the contour of the playing surface overlayed
-    cv2.imshow('Contoured', contoured)
-    cv2.moveWindow("Original", x_offset, y_offset)
+    #cv2.imshow('Contoured', contoured)
+    # cv2.moveWindow("Original", x_offset, y_offset)
 
     # Only show the transformed surface if it exists (given to function implies existence)
     if bool(transformed.any()):
         # Transformed playing surface
-        cv2.imshow("Transformed", transformed)
+        #cv2.imshow("Transformed", transformed)
+        pass
     return
