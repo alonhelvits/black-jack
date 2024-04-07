@@ -255,9 +255,10 @@ def playBlackJack():
     This function reads the video from the webcam cameras and starts the game
     """
 
-    # read_and_write_video()
-    # read_video_from_iphone()
-    read_from_video('clear_background_2.MOV')
+    #read_and_write_video()
+    #read_video_from_iphone()
+    #read_from_video('clear_background_2.MOV')
+    read_from_video('IMG_7114.MOV')
 
 
 if __name__ == '__main__':
