@@ -165,11 +165,13 @@ def read_video_from_iphone():
 
     # Set capture device properties for iPhone video
     cap.set(cv2.CAP_PROP_FPS, 30)  # Set desired frame rate (adjust as needed)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)  # Set desired frame width
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)  # Set desired frame height
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)  # Set desired frame width
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)  # Set desired frame height
 
+    print(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    print(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     # Check if properties are set successfully
-    if cap.get(cv2.CAP_PROP_FRAME_WIDTH) != 1280 or cap.get(cv2.CAP_PROP_FRAME_HEIGHT) != 720:
+    if cap.get(cv2.CAP_PROP_FRAME_WIDTH) != 1920 or cap.get(cv2.CAP_PROP_FRAME_HEIGHT) != 1080:
         print("Error: Failed to set capture device properties for iPhone video.")
         cap.release()
         return None
@@ -256,9 +258,9 @@ def playBlackJack():
     """
 
     # read_and_write_video()
-    # read_video_from_iphone()
-    read_from_video('clear_background_2.MOV')
-
+    #read_video_from_iphone()
+    read_from_video('train_files/lib_03_with_chips.MOV')
+    #read_from_video('train_files/board_with_tape_one_round.MOV')
 
 if __name__ == '__main__':
     playBlackJack()

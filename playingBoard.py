@@ -51,7 +51,9 @@ def board_detection(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Apply Gaussian blur to the grayscale image to reduce noise
-    blurred = cv2.bilateralFilter(gray, 11, 17, 17)
+    #blurred = cv2.bilateralFilter(gray, 11, 17, 17)
+    blurred = cv2.medianBlur(gray, 9)
+    blurred = cv2.GaussianBlur(blurred, (5, 5), 0)
 
     # Perform adaptive thresholding
     img_w, img_h = np.shape(frame)[:2]
@@ -60,6 +62,9 @@ def board_detection(frame):
     thresh_level = bkg_level + BKG_THRESH
 
     thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 7, 2)
+    #cv2.imshow("Threshold", thresh)
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
 
     # Find contours in the edge-detected image
     contours, _ = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
@@ -69,7 +74,7 @@ def board_detection(frame):
     # Find the closed contour with the largest length
     max_length = 0
     most_significant_contour = None
-    epsilon = 0.01
+    epsilon = 0.005
     board_contour = None
 
     four_edge_cont = []
@@ -88,9 +93,12 @@ def board_detection(frame):
     marked_frame = frame.copy()
     if board_contour is not None:
         cv2.drawContours(marked_frame, [most_significant_contour], -1, (0, 255, 0), 2)
-        new_width, new_height = 1200, 800
-        resized_image = cv2.resize(marked_frame, (new_width, new_height))
-        cv2.imshow("Searching Board...", resized_image)
+        #new_width, new_height = 1200, 800
+        #resized_image = cv2.resize(marked_frame, (new_width, new_height))
+        #cv2.imshow("Searching Board...", resized_image)
+        cv2.imshow("Searching Board...", marked_frame)
+        #cv2.waitKey(0)
+        #cv2.destroyAllWindows()
         contour_points = board_contour.reshape(4, 2)
     else:
         return None
@@ -159,7 +167,6 @@ def board_detection(frame):
         return None
 
 
-
 def board_transformation(corners, frame, height, width):
     top_left = corners[0]
     top_right = corners[1]
@@ -179,31 +186,9 @@ def board_transformation(corners, frame, height, width):
 
     return output_frame, matrix
 
-'''
-def get_board(cap):
-    playing_board = None
-
-    # Reading the frame from the camera
-    ret, frame = cap.read()
-
-    # Trying to get the playing board:
-    playing_board = board_detection(frame)
-
-    if playing_board:
-        # Configure and display the contoured and transformed images if the playing surface was found
-        cnt_disp = deepcopy(playing_board.board_with_contour)
-        trans_disp = deepcopy(playing_board.transformed_board)
-        display(cnt_disp, trans_disp)
-        valid_surface = playing_board
-        cv2.destroyAllWindows()
-        return valid_surface
-    else:
-        print("Image wasn't found")
-        return None
-'''
 
 
-def get_board(cap, time_window=7, detection_threshold=0.5):
+def get_board(cap, time_window=10, detection_threshold=0.4):
     playing_board = None
     temp_playing_board = None
     start_time = time.time()
@@ -222,7 +207,7 @@ def get_board(cap, time_window=7, detection_threshold=0.5):
             detection_count += 1
             playing_board = deepcopy(temp_playing_board)
             #cv2.imshow("Searching for Boards...", playing_board.board_with_contour)
-            if (detection_count > 20) and (detection_count / frame_count >= detection_threshold):
+            if (detection_count > 5) and (detection_count / frame_count >= detection_threshold):
                 break
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -241,7 +226,7 @@ def get_board(cap, time_window=7, detection_threshold=0.5):
         cv2.destroyAllWindows()
         return valid_surface
     else:
-        print("Board wasn't found in at least 70% of the frames within the time window")
+        print("Board wasn't found in at least 40% of the frames within the time window")
         return None
 
 def display(contoured, transformed=np.array([])):

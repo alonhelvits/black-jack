@@ -192,7 +192,7 @@ def classify_card_number(card_rank_image, rank_templates):
 
 
 # Function for grouping cards based on spatial proximity
-def group_cards(cards, image):
+def group_cards_coins(cards, image):
     dealer_cards = []
     player1_cards = []
     player2_cards = []
@@ -349,7 +349,7 @@ def Detect_cards(input_image):
             cv2.putText(marked_frame, f"{card.rank}", (card.center[0] - 50, card.center[1]),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
 
-    dealer_cards, player_cards = group_cards(cards, input_image)
+    dealer_cards, player_cards = group_cards_coins(cards, input_image)
     return cards, dealer_cards, player_cards, marked_frame
 
     # # Show the marked frame with contours
