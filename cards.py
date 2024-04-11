@@ -33,12 +33,12 @@ class Card:
 def find_cards(image):
     covered_card_template = cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
 
-    BKG_THRESH = 30
-    CARD_THRESH = 24 #lower threshold - more sensitive to light digits (white level - thresh)
+    BKG_THRESH = 25
+    CARD_THRESH = 20 #lower threshold - more sensitive to light digits (white level - thresh)
 
     # Width and height of card corner, where rank and suit are
     CORNER_WIDTH = 32
-    CORNER_HEIGHT = 75
+    CORNER_HEIGHT = 40
 
     # Dimensions of rank train images
     RANK_WIDTH = 72
@@ -69,8 +69,8 @@ def find_cards(image):
     thresh_level = bkg_level + BKG_THRESH
 
     retval, thresh = cv2.threshold(blurred, thresh_level, 255, cv2.THRESH_BINARY)
-    #cv2.imshow("sas", thresh)
-    #cv2.waitKey(1)
+    cv2.imshow("sas", thresh)
+    cv2.waitKey(1)
 
     # Find contours
     #contours, hier = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -80,9 +80,9 @@ def find_cards(image):
         return [], []
 
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
-    # cv2.drawContours(image, contours, -1, (0, 255, 0), 2)
-    # cv2.imshow("asa", image)
-    # cv2.waitKey(1)
+    #cv2.drawContours(image, contours, -1, (0, 255, 0), 2)
+    #cv2.imshow("asa", image)
+    #cv2.waitKey(1)
     cards = []
 
     # Loop over the contours
@@ -122,7 +122,7 @@ def find_cards(image):
                 covered_diff = int(np.sum(cv2.absdiff(resized_covered_card_template, warped) / 255))
                 #int(np.sum(diff_img) / 255)
                 # print(covered_diff)
-                if covered_diff < 16000: # check if the card is covered, adjust number for sensitivity
+                if covered_diff < 14500: # check if the card is covered, adjust number for sensitivity
                     rank_img= "Covered"
                     cards.append(Card(np.float32(approx), center, warped, contour, card_width, card_height, rank_img))
                 else:
@@ -139,24 +139,24 @@ def find_cards(image):
                     white_level = warped[10, card_width//4]
                     black_level, white_level, _ , _ = cv2.minMaxLoc(Qcorner_zoom)
                     #white_level = np.bincount(Qcorner_zoom.ravel()).argmax()
-                    thresh_level = white_level - black_level
+                    thresh_level = (white_level + black_level)//2 + black_level//20
                     if (thresh_level <= 0):
                         thresh_level = 1
-                    retval, query_thresh = cv2.threshold(Qcorner_zoom, thresh_level, 255, cv2.THRESH_BINARY_INV)
+                    retval, Qrank_inv = cv2.threshold(Qcorner_zoom, thresh_level, 255, cv2.THRESH_BINARY_INV)
 
-                    Qrank = query_thresh[20:165, 5:128]
-                    cv2.imshow('Marked Frame', Qrank)
-                    cv2.waitKey(1)
+                    # Qrank = query_thresh[20:165, 5:128]
+                    # cv2.imshow('Marked Frame', Qrank)
+                    # cv2.waitKey(1)
 
                     # Find rank contour and bounding rectangle, isolate and find largest contour
-                    Qrank_cnts, hier = cv2.findContours(Qrank, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                    Qrank_cnts, hier = cv2.findContours(Qrank_inv, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
                     Qrank_cnts = sorted(Qrank_cnts, key=cv2.contourArea, reverse=True)
 
                     # Find bounding rectangle for largest contour, use it to resize query rank
                     # image to match dimensions of the train rank image
                     if len(Qrank_cnts) != 0:
                         x1, y1, w1, h1 = cv2.boundingRect(Qrank_cnts[0])
-                        Qrank_roi = Qrank[y1:y1 + h1, x1:x1 + w1]
+                        Qrank_roi = Qrank_inv[y1:y1 + h1, x1:x1 + w1]
                         Qrank_sized = cv2.resize(Qrank_roi, (RANK_WIDTH, RANK_HEIGHT), 0, 0)
                         rank_img = Qrank_sized
                     else:

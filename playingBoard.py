@@ -51,7 +51,7 @@ def board_detection(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Apply Gaussian blur to the grayscale image to reduce noise
-    #blurred = cv2.bilateralFilter(gray, 11, 17, 17)
+    #blurred = cv2.bilateralFilter(gray, 11, 17, 11)
     blurred = cv2.medianBlur(gray, 9)
     blurred = cv2.GaussianBlur(blurred, (5, 5), 0)
 
@@ -62,11 +62,15 @@ def board_detection(frame):
     thresh_level = bkg_level + BKG_THRESH
 
     thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 7, 2)
-
+    #cv2.imshow("Threshold", thresh)
+    #cv2.waitKey(0)
     # Find contours in the edge-detected image
     contours, _ = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     # Sort the contours by area in descending order
     contours = sorted(contours, key=cv2.contourArea, reverse=True)[:5]
+    cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
+    cv2.imshow("Contours", frame)
+    cv2.waitKey(0)
 
     # Find the closed contour with the largest length
     max_length = 0
