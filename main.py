@@ -132,6 +132,9 @@ def read_from_video(video_path):
                 # Use cv2.waitKey() to check for keyboard input
                 key = cv2.waitKey(1) & 0xFF
 
+                # Add a delay to match the original video's frame rate
+                cv2.waitKey(30)  # Adjust the delay value as needed
+
                 # if the 'q' key is pressed, break from the loop
                 if key == ord('q'):
                     break
@@ -258,8 +261,8 @@ def playBlackJack():
     #read_and_write_video()
     #read_video_from_iphone()
     #read_from_video('clear_background_2.MOV')
-    read_from_video('IMG_7114.MOV')
-
+    read_from_video('lib_01_no_chips.MOV')
+    #read_from_video("one_round_game_transformed.mov")
 
 if __name__ == '__main__':
     playBlackJack()

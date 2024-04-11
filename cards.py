@@ -33,8 +33,8 @@ class Card:
 def find_cards(image):
     covered_card_template = cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
 
-    BKG_THRESH = 80
-    CARD_THRESH = 21 #lower threshold - more sensitive to light digits (white level - thresh)
+    BKG_THRESH = 30
+    CARD_THRESH = 24 #lower threshold - more sensitive to light digits (white level - thresh)
 
     # Width and height of card corner, where rank and suit are
     CORNER_WIDTH = 32
@@ -129,20 +129,24 @@ def find_cards(image):
                     # Grab corner of warped card image and do a 5x zoom
                     Qcorner = warped[0:CORNER_HEIGHT, 0:CORNER_WIDTH]
                     Qcorner_zoom = cv2.resize(Qcorner, (0, 0), fx=4, fy=4)
-                    # cv2.imshow('Marked Frame', Qcorner_zoom) #show zoom to corner
-                    # cv2.waitKey(1)
+
+                    cv2.imshow('Qcorner_zoom', Qcorner_zoom)  # show zoom to corner
+                    cv2.waitKey(1)
+                    # Increase contrast using histogram equalization
+                    #equalized_image = cv2.equalizeHist(Qcorner_zoom)
 
                     # Sample known white pixel intensity to determine good threshold level
-                    # white_level = Qcorner_zoom[15, int((CORNER_WIDTH * 4) / 2)]
-                    white_level = np.bincount(Qcorner_zoom.ravel()).argmax()
-                    thresh_level = white_level - CARD_THRESH
+                    white_level = warped[10, card_width//4]
+                    black_level, white_level, _ , _ = cv2.minMaxLoc(Qcorner_zoom)
+                    #white_level = np.bincount(Qcorner_zoom.ravel()).argmax()
+                    thresh_level = white_level - black_level
                     if (thresh_level <= 0):
                         thresh_level = 1
                     retval, query_thresh = cv2.threshold(Qcorner_zoom, thresh_level, 255, cv2.THRESH_BINARY_INV)
 
-                    Qrank = query_thresh[20:165, 15:128]
-                    # cv2.imshow('Marked Frame', Qrank)
-                    # cv2.waitKey(1)
+                    Qrank = query_thresh[20:165, 5:128]
+                    cv2.imshow('Marked Frame', Qrank)
+                    cv2.waitKey(1)
 
                     # Find rank contour and bounding rectangle, isolate and find largest contour
                     Qrank_cnts, hier = cv2.findContours(Qrank, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -157,8 +161,8 @@ def find_cards(image):
                         rank_img = Qrank_sized
                     else:
                         continue
-                    # cv2.imshow('Marked Frame', rank_img)
-                    # cv2.waitKey(1)
+                    cv2.imshow('rank img', rank_img)
+                    cv2.waitKey(1)
                     #cv2.imshow('Marked Frame', warped)
                     #cv2.waitKey(1)
                     # Create a Card object and append it to the list

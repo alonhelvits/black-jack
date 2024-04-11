@@ -51,7 +51,9 @@ def board_detection(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Apply Gaussian blur to the grayscale image to reduce noise
-    blurred = cv2.bilateralFilter(gray, 11, 17, 17)
+    #blurred = cv2.bilateralFilter(gray, 11, 17, 17)
+    blurred = cv2.medianBlur(gray, 9)
+    blurred = cv2.GaussianBlur(blurred, (5, 5), 0)
 
     # Perform adaptive thresholding
     img_w, img_h = np.shape(frame)[:2]
