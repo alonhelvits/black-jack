@@ -68,14 +68,11 @@ def board_detection(frame):
     contours, _ = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     # Sort the contours by area in descending order
     contours = sorted(contours, key=cv2.contourArea, reverse=True)[:5]
-    cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
-    cv2.imshow("Contours", frame)
-    cv2.waitKey(0)
 
     # Find the closed contour with the largest length
     max_length = 0
     most_significant_contour = None
-    epsilon = 0.01
+    epsilon = 0.005
     board_contour = None
 
     four_edge_cont = []

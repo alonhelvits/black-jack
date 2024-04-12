@@ -4,6 +4,7 @@ import numpy as np
 import playingBoard
 import cards as cards_file
 import player
+import coins as coins_file
 
 
 def read_and_write_video():
@@ -107,18 +108,22 @@ def read_from_video(video_path):
                 # apply card detection
                 cards, dealer_cards, players_cards, marked_cards_board = cards_file.Detect_cards(transformed_board)
 
+                # apply coin detection
+                coins, dealer_coins, player_coins, marked_cards_coins_board = coins_file.detect_coins(marked_cards_board)
+
                 # apply the game logic
                 all_cards = dealer_cards + players_cards[0] + players_cards[1]
+
                 # no situation of fewer cards than previous should happen in the middle of the game, card is not detected
                 if len(previous_all_cards) > len(all_cards) > 0 and (
                         game_state_manager.is_playing() or game_state_manager.is_result()):
                     game_image, running_count, true_count, game_state_manager, decks_remaining = player.process_game(
-                        previous_dealer_cards, previous_players_cards, marked_cards_board, running_count, true_count,
+                        previous_dealer_cards, previous_players_cards, marked_cards_coins_board, running_count, true_count,
                         game_state_manager,
                         decks_remaining)
                 else:
                     game_image, running_count, true_count, game_state_manager, decks_remaining = player.process_game(
-                        dealer_cards, players_cards, marked_cards_board, running_count, true_count, game_state_manager,
+                        dealer_cards, players_cards, marked_cards_coins_board, running_count, true_count, game_state_manager,
                         decks_remaining)
                     # update previous cards, when normal game is running
                     previous_dealer_cards = dealer_cards
@@ -168,11 +173,11 @@ def read_video_from_iphone():
 
     # Set capture device properties for iPhone video
     cap.set(cv2.CAP_PROP_FPS, 30)  # Set desired frame rate (adjust as needed)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)  # Set desired frame width
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)  # Set desired frame height
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)  # Set desired frame width
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)  # Set desired frame height
 
     # Check if properties are set successfully
-    if cap.get(cv2.CAP_PROP_FRAME_WIDTH) != 1280 or cap.get(cv2.CAP_PROP_FRAME_HEIGHT) != 720:
+    if cap.get(cv2.CAP_PROP_FRAME_WIDTH) != 1920 or cap.get(cv2.CAP_PROP_FRAME_HEIGHT) != 1080:
         print("Error: Failed to set capture device properties for iPhone video.")
         cap.release()
         return None
@@ -208,18 +213,21 @@ def read_video_from_iphone():
             # apply card detection
             cards, dealer_cards, players_cards, marked_cards_board = cards_file.Detect_cards(transformed_board)
 
+            # apply coin detection
+            coins, dealer_coins, player_coins, marked_cards_coins_board = coins_file.detect_coins(marked_cards_board)
+
             # apply the game logic
             all_cards = dealer_cards + players_cards[0] + players_cards[1]
             # no situation of fewer cards than previous should happen in the middle of the game, card is not detected
             if len(previous_all_cards) > len(all_cards) > 0 and (
                     game_state_manager.is_playing() or game_state_manager.is_result()):
                 game_image, running_count, true_count, game_state_manager, decks_remaining = player.process_game(
-                    previous_dealer_cards, previous_players_cards, marked_cards_board, running_count, true_count,
+                    previous_dealer_cards, previous_players_cards, marked_cards_coins_board, running_count, true_count,
                     game_state_manager,
                     decks_remaining)
             else:
                 game_image, running_count, true_count, game_state_manager, decks_remaining = player.process_game(
-                    dealer_cards, players_cards, marked_cards_board, running_count, true_count, game_state_manager,
+                    dealer_cards, players_cards, marked_cards_coins_board, running_count, true_count, game_state_manager,
                     decks_remaining)
                 # update previous cards, when normal game is running
                 previous_dealer_cards = dealer_cards
@@ -259,9 +267,9 @@ def playBlackJack():
     """
 
     #read_and_write_video()
-    #read_video_from_iphone()
+    read_video_from_iphone()
     #read_from_video('clear_background_2.MOV')
-    read_from_video('IMG_7131.MOV')
+    #read_from_video('IMG_7133.mov')
     #read_from_video("one_round_game_transformed.mov")
 
 if __name__ == '__main__':

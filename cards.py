@@ -15,8 +15,10 @@ rank_templates = {
     'Jack': cv2.imread('Card_Imgs/Jack.jpg', cv2.IMREAD_GRAYSCALE),
     'Queen': cv2.imread('Card_Imgs/Queen.jpg', cv2.IMREAD_GRAYSCALE),
     'King': cv2.imread('Card_Imgs/King.jpg', cv2.IMREAD_GRAYSCALE),
-    'Covered': cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
 }
+
+covered_template = cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
+
 
 class Card:
     def __init__(self, corners, center, transpose_image, contour,card_width, card_height,rank_img):
@@ -37,8 +39,8 @@ def find_cards(image):
     CARD_THRESH = 20 #lower threshold - more sensitive to light digits (white level - thresh)
 
     # Width and height of card corner, where rank and suit are
-    CORNER_WIDTH = 32
-    CORNER_HEIGHT = 40
+    CORNER_WIDTH = 63
+    CORNER_HEIGHT = 80
 
     # Dimensions of rank train images
     RANK_WIDTH = 72
@@ -69,8 +71,8 @@ def find_cards(image):
     thresh_level = bkg_level + BKG_THRESH
 
     retval, thresh = cv2.threshold(blurred, thresh_level, 255, cv2.THRESH_BINARY)
-    cv2.imshow("sas", thresh)
-    cv2.waitKey(1)
+    #cv2.imshow("sas", thresh)
+    #cv2.waitKey(1)
 
     # Find contours
     #contours, hier = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -113,21 +115,21 @@ def find_cards(image):
                 dst = np.float32([[0, 0], [width, 0], [width, height], [0, height]])
 
                 warped = flattener(image, np.float32(approx), card_width, card_height)
-                # cv2.imshow('Marked Frame', warped) #show all card
-                # cv2.waitKey(1)
+                cv2.imshow('Marked Frame', warped) #show all card
+                cv2.waitKey(1)
 
                 #check if covered card
                 warped_dimensions = warped.shape[:2]
-                resized_covered_card_template = cv2.resize(covered_card_template, (warped_dimensions[1], warped_dimensions[0]))
-                covered_diff = int(np.sum(cv2.absdiff(resized_covered_card_template, warped) / 255))
+                #resized_covered_card_template = cv2.resize(covered_card_template, (warped_dimensions[1], warped_dimensions[0]))
+                covered_diff = int(np.sum(cv2.absdiff(covered_template, warped) / 255))
                 #int(np.sum(diff_img) / 255)
                 # print(covered_diff)
-                if covered_diff < 14500: # check if the card is covered, adjust number for sensitivity
+                if covered_diff < 58000: # check if the card is covered, adjust number for sensitivity
                     rank_img= "Covered"
                     cards.append(Card(np.float32(approx), center, warped, contour, card_width, card_height, rank_img))
                 else:
                     # Grab corner of warped card image and do a 5x zoom
-                    Qcorner = warped[0:CORNER_HEIGHT, 0:CORNER_WIDTH]
+                    Qcorner = warped[8:CORNER_HEIGHT+8, 0:CORNER_WIDTH]
                     Qcorner_zoom = cv2.resize(Qcorner, (0, 0), fx=4, fy=4)
 
                     cv2.imshow('Qcorner_zoom', Qcorner_zoom)  # show zoom to corner
@@ -139,7 +141,8 @@ def find_cards(image):
                     white_level = warped[10, card_width//4]
                     black_level, white_level, _ , _ = cv2.minMaxLoc(Qcorner_zoom)
                     #white_level = np.bincount(Qcorner_zoom.ravel()).argmax()
-                    thresh_level = (white_level + black_level)//2 + black_level//20
+                    #thresh_level = (white_level + black_level)//2 + black_level//5
+                    thresh_level = (white_level + black_level) // 2 + black_level//20
                     if (thresh_level <= 0):
                         thresh_level = 1
                     retval, Qrank_inv = cv2.threshold(Qcorner_zoom, thresh_level, 255, cv2.THRESH_BINARY_INV)
@@ -196,7 +199,7 @@ def classify_card_number(card_rank_image, rank_templates):
 
 
 # Function for grouping cards based on spatial proximity
-def group_cards(cards, image):
+def group_cards_coins(cards, image):
     dealer_cards = []
     player1_cards = []
     player2_cards = []
@@ -304,8 +307,8 @@ def flattener(image, pts, w, h):
             temp_rect[2] = pts[2][0]  # Bottom right
             temp_rect[3] = pts[1][0]  # Bottom left
 
-    maxWidth = 200
-    maxHeight = 300
+    maxWidth = 400
+    maxHeight = 600
 
     # Create destination array, calculate perspective transform matrix,
     # and warp card image
@@ -353,7 +356,7 @@ def Detect_cards(input_image):
             cv2.putText(marked_frame, f"{card.rank}", (card.center[0] - 50, card.center[1]),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
 
-    dealer_cards, player_cards = group_cards(cards, input_image)
+    dealer_cards, player_cards = group_cards_coins(cards, input_image)
     return cards, dealer_cards, player_cards, marked_frame
 
     # # Show the marked frame with contours
