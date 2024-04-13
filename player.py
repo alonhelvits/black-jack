@@ -6,18 +6,22 @@ class Participant:
 
     def __init__(self):
         self.hand = []
-        self.value = 0
+        self.coins = []
+        self.cards_value = 0
+        self.coins_value = 0
         self.aces = 0
 
-    def set_hand(self, cards):
+    def set_hand(self, cards, coins):
         """Set the entire hand at once and recalculate the value."""
         ##cards is a list of strings representing the cards in the hand, ex. ['1', 'K', 'A']"
         self.hand = cards
-        self.calculate_value()
+        self.calculate_cards_value()
+        self.coins = coins
+        self.calculate_coins_value()
 
-    def calculate_value(self):
+    def calculate_cards_value(self):
         """Calculate the value of the hand, adjusting for aces as necessary."""
-        self.value, self.aces = 0, 0
+        self.cards_value, self.aces = 0, 0
         card_values = {
             "One": 1, "Two": 2, "Three": 3, "Four": 4, "Five": 5,
             "Six": 6, "Seven": 7, "Eight": 8, "Nine": 9, "Ten": 10,
@@ -25,7 +29,7 @@ class Participant:
         }
         for card in self.hand:
             if card in card_values:
-                self.value += card_values[card]
+                self.cards_value += card_values[card]
                 if card == "Ace":
                     self.aces += 1
 
@@ -33,9 +37,18 @@ class Participant:
 
     def adjust_for_aces(self):
         """Adjust the value of the hand if there are aces and the value is over 21."""
-        while self.value > 21 and self.aces:
-            self.value -= 10
+        while self.cards_value > 21 and self.aces:
+            self.cards_value -= 10
             self.aces -= 1
+
+    def calculate_coins_value(self):
+        """Calculate the value of the hand, adjusting for aces as necessary."""
+        self.coins_value = 0
+        coin_values = {
+            "Red": 1, "Green": 10, "Blue": 100, "White": 1000}
+        for coin in self.coins:
+            if coin in coin_values:
+                self.coins_value += coin_values[coin]
 
 
 class Dealer(Participant):
@@ -48,7 +61,7 @@ class Player(Participant):
     pass
 
 
-def create_game(dealer_cards, players_cards):
+def create_game(dealer_cards, players_cards, dealer_coins, player_coins):
     """
     Create a game setup with one dealer and two players.
 
@@ -62,12 +75,12 @@ def create_game(dealer_cards, players_cards):
 
     # Create dealer instance and set hand
     dealer = Dealer()
-    dealer.set_hand(dealer_cards)
+    dealer.set_hand(dealer_cards, dealer_coins)
 
     # Create player instances and set hands
     players = [Player() for _ in range(2)]  # Adjust if you need more or fewer players
-    for player, cards in zip(players, players_cards):
-        player.set_hand(cards)
+    for player, cards, coins in zip(players, players_cards, player_coins):
+        player.set_hand(cards, coins)
 
     return dealer, players
 
@@ -76,13 +89,16 @@ class GameState:
     def __init__(self):
         self.current_state = "betting"
         self.count_updated_this_round = False
+        self.profit_updated_this_round_0 = False
+        self.profit_updated_this_round_1 = False
         self.current_cards = []
 
     # Simplified state transition methods; removed redundancy in resetting count_updated_this_round.
     def transition_to_betting(self):
         self.current_state = "betting"
-        if self.count_updated_this_round == True:  # Ensure we reset the count flag here.
-            self.count_updated_this_round = False
+        self.count_updated_this_round = False
+        self.profit_updated_this_round_0 = False
+        self.profit_updated_this_round_1 = False
 
     def transition_to_playing(self):
         self.current_state = "playing"
@@ -105,22 +121,22 @@ def basic_strategy(player, dealer):
     """Suggest the best action (hit or stand) based on the basic blackjack strategy."""
 
     # Adjust for Ace
-    while player.value > 21 and player.aces:
-        player.value -= 10
+    while player.cards_value > 21 and player.aces:
+        player.cards_value -= 10
         player.aces -= 1
 
     # Simple Basic Strategy Logic
-    if player.value > 21:  # Busted already
+    if player.cards_value > 21:  # Busted already
         return 'Busted..'
-    elif player.value == 21:  # Always stand on 21
+    elif player.cards_value == 21:  # Always stand on 21
         return 'BlackJack!'
-    elif 17 <= player.value <= 20:  # Stand on 17 or higher
+    elif 17 <= player.cards_value <= 20:  # Stand on 17 or higher
         return 'Stand'
-    elif player.value <= 11:  # Always hit 11 or less
+    elif player.cards_value <= 11:  # Always hit 11 or less
         return 'Hit'
-    elif player.value == 12 and 4 <= dealer.value <= 6:  # Stand if dealer shows 4-6, otherwise hit
+    elif player.cards_value == 12 and 4 <= dealer.cards_value <= 6:  # Stand if dealer shows 4-6, otherwise hit
         return 'Stand'
-    elif 13 <= player.value <= 16 and 2 <= dealer.value <= 6:  # Stand if dealer shows 2-6, otherwise hit
+    elif 13 <= player.cards_value <= 16 and 2 <= dealer.cards_value <= 6:  # Stand if dealer shows 2-6, otherwise hit
         return 'Stand'
     else:
         return 'Hit'
@@ -153,21 +169,21 @@ def bet_suggestion(true_count):
 
 def game_results(dealer, player):
     result = ""
-    if player.value > 21:
+    if player.cards_value > 21:
         result = "Busted"
-    elif dealer.value > 21 or player.value > dealer.value:
+    elif dealer.cards_value > 21 or player.cards_value > dealer.cards_value:
         result = "Won"
-    elif player.value == dealer.value:
+    elif player.cards_value == dealer.cards_value:
         result = "Push"
     else:
         result = "Lost"
     return result
 
 
-def process_game(dealer_cards, players_cards, input_image, running_count, true_count, game_state_manager,
-                 decks_remaining):
-
-    dealer, players = create_game(dealer_cards, players_cards)
+def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
+                 input_image, running_count, true_count, game_state_manager, decks_remaining,
+                 players_total_profit):
+    dealer, players = create_game(dealer_cards, players_cards, dealer_coins, players_coins)
     game_image = input_image.copy()
 
     # configure the text drawing parameters
@@ -232,7 +248,31 @@ def process_game(dealer_cards, players_cards, input_image, running_count, true_c
                         (center_of_image[0] - 270, center_of_image[1] + 360),
                         font, 2, (0, 0, 0), 8)
 
+
         elif game_state_manager.is_betting():
+
+            if players[0].coins:
+                players[0].calculate_coins_value()
+                cv2.putText(game_image,
+                            f"Current Bet: {players[0].coins_value} \n Total profit: {players_total_profit[0]}",
+                            (bottom_left_center_position[0] - 90, bottom_left_center_position[1] - 90), font, 2,
+                            (255, 255, 255), 25)
+                cv2.putText(game_image,
+                            f"Current Bet: {players[0].coins_value} \n Total profit: {players_total_profit[0]}",
+                            (bottom_left_center_position[0] - 150, bottom_left_center_position[1] - 90), font, 2,
+                            (0, 0, 0), 8)
+
+            if players[1].coins:
+                players[1].calculate_coins_value()
+                cv2.putText(game_image,
+                            f"Current Bet: {players[1].coins_value} \n Total profit: {players_total_profit[1]}",
+                            (bottom_right_center_position[0] - 150, bottom_right_center_position[1] - 90), font, 2,
+                            (255, 255, 255), 25)
+                cv2.putText(game_image,
+                            f"Current Bet: {players[1].coins_value} \n Total profit: {players_total_profit[1]}",
+                            (bottom_right_center_position[0] - 90, bottom_right_center_position[1] - 90), font, 2,
+                            (0, 0, 0), 8)
+
             if running_count != 0:
                 true_count = calculate_true_count(decks_remaining, running_count)
                 bet_suggestion_text = bet_suggestion(true_count)
@@ -279,28 +319,28 @@ def process_game(dealer_cards, players_cards, input_image, running_count, true_c
 
         # Additional conditions for betting phase can be added here
 
-    elif "Covered" in dealer.hand and len(dealer.hand) == 2:
-        dealer.calculate_value()
-        players[0].calculate_value()
-        players[1].calculate_value()
+    elif "Covered" in dealer.hand and len(dealer.hand) >= 2:
+        dealer.calculate_cards_value()
+        players[0].calculate_cards_value()
+        players[1].calculate_cards_value()
         game_state_manager.transition_to_playing()
         cv2.putText(game_image, "Playing Phase",
                     (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 25)
         cv2.putText(game_image, "Playing Phase",
                     (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
 
-        cv2.putText(game_image, f"Dealer's Card: {dealer.value}",
+        cv2.putText(game_image, f"Dealer's Card: {dealer.cards_value}",
                     (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (255, 255, 255), 25)
-        cv2.putText(game_image, f"Dealer's Card: {dealer.value}",
+        cv2.putText(game_image, f"Dealer's Card: {dealer.cards_value}",
                     (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (0, 0, 0), 8)
 
         # calculate basic strategy for each player, and display the recommended action
         if players[0].hand:
             action = basic_strategy(players[0], dealer)
-            if players[0].aces != 0 and players[0].value <= 21:
-                player_text = f"Hand: {players[0].value} / {players[0].value - 10} , {action}"
+            if players[0].aces != 0 and players[0].cards_value <= 21:
+                player_text = f"Hand: {players[0].cards_value} / {players[0].cards_value - 10} , {action}"
             else:
-                player_text = f"Hand: {players[0].value} , {action}"
+                player_text = f"Hand: {players[0].cards_value} , {action}"
             cv2.putText(game_image, player_text,
                         bottom_left_center_position, font, 2, (255, 255, 255), 25)
             cv2.putText(game_image, player_text,
@@ -308,10 +348,10 @@ def process_game(dealer_cards, players_cards, input_image, running_count, true_c
 
         if players[1].hand:
             action = basic_strategy(players[1], dealer)
-            if players[1].aces != 0 and players[1].value <= 21:
-                player_text = f"Hand: {players[1].value} / {players[1].value - 10} , {action}"
+            if players[1].aces != 0 and players[1].cards_value <= 21:
+                player_text = f"Hand: {players[1].cards_value} / {players[1].cards_value - 10} , {action}"
             else:
-                player_text = f"Hand: {players[1].value} , {action}"
+                player_text = f"Hand: {players[1].cards_value} , {action}"
 
             cv2.putText(game_image, player_text,
                         bottom_right_center_position, font, 2, (255, 255, 255), 25)
@@ -320,45 +360,97 @@ def process_game(dealer_cards, players_cards, input_image, running_count, true_c
 
 
     elif len(dealer.hand) >= 2 and "Covered" not in dealer.hand:
-        dealer.calculate_value()
-        if dealer.value >= 17:
-            cv2.putText(game_image, f"Dealer's Hand: {dealer.value}",
-                        (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (255, 255, 255), 25)
-            cv2.putText(game_image, f"Dealer's Hand: {dealer.value}",
-                        (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (0, 0, 0), 8)
+        dealer.calculate_cards_value()
+        if dealer.cards_value >= 17:
             game_state_manager.transition_to_result()
+            cv2.putText(game_image, f"Dealer's Hand: {dealer.cards_value}",
+                        (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (255, 255, 255), 25)
+            cv2.putText(game_image, f"Dealer's Hand: {dealer.cards_value}",
+                        (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (0, 0, 0), 8)
             cv2.putText(game_image, "Result Phase",
                         (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 25)
             cv2.putText(game_image, "Result Phase",
                         (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
 
             if players[0].hand:
-                players[0].calculate_value()
+                players[0].calculate_cards_value()
                 result = game_results(dealer, players[0])
 
-                cv2.putText(game_image, f"Hand: {players[0].value}",
-                            (bottom_left_center_position[0], bottom_left_center_position[1] - 90), font, 2, (255, 255, 255), 25)
-                cv2.putText(game_image, f"Hand: {players[0].value}",
-                            (bottom_left_center_position[0], bottom_left_center_position[1] - 90), font, 2, (0, 0, 0), 8)
+                cv2.putText(game_image, f"Hand: {players[0].cards_value}",
+                            (bottom_left_center_position[0], bottom_left_center_position[1] - 90), font, 2,
+                            (255, 255, 255), 25)
+                cv2.putText(game_image, f"Hand: {players[0].cards_value}",
+                            (bottom_left_center_position[0], bottom_left_center_position[1] - 90), font, 2, (0, 0, 0),
+                            8)
                 player_text = f"Result: {result}"
                 cv2.putText(game_image, player_text,
                             bottom_left_center_position, font, 2, (255, 255, 255), 25)
                 cv2.putText(game_image, player_text,
                             bottom_left_center_position, font, 2, (0, 0, 0), 8)
 
+            if players[0].coins:
+                players[0].calculate_coins_value()
+
+                if result == "Won":
+                    bet_print = f"Won {players[0].coins_value}"
+                    if not game_state_manager.profit_updated_this_round_0:
+                        players_total_profit[0] += players[0].coins_value
+                        game_state_manager.profit_updated_this_round_0 = True
+                elif result == "Push":
+                    pass
+                else:
+                    bet_print = f"Lost {players[0].coins_value}"
+                    if not game_state_manager.profit_updated_this_round_0:
+                        players_total_profit[0] -= players[0].coins_value
+                        game_state_manager.profit_updated_this_round_0 = True
+
+                cv2.putText(game_image, f"Bet result: {bet_print}",
+                            (bottom_left_center_position[0] - 90, bottom_left_center_position[1] - 90), font, 2,
+                            (255, 255, 255), 25)
+                cv2.putText(game_image, f"Bet:: {bet_print}",
+                            (bottom_left_center_position[0] - 90, bottom_left_center_position[1] - 90), font, 2,
+                            (0, 0, 0),
+                            8)
+
             if players[1].hand:
-                players[1].calculate_value()
+                players[1].calculate_cards_value()
                 result = game_results(dealer, players[1])
 
-                cv2.putText(game_image, f"Hand: {players[1].value}",
-                            (bottom_right_center_position[0], bottom_right_center_position[1] - 90), font, 2, (255, 255, 255), 25)
-                cv2.putText(game_image, f"Hand: {players[1].value}",
-                            (bottom_right_center_position[0], bottom_right_center_position[1] - 90), font, 2, (0, 0, 0), 8)
+                cv2.putText(game_image, f"Hand: {players[1].cards_value}",
+                            (bottom_right_center_position[0], bottom_right_center_position[1] - 90), font, 2,
+                            (255, 255, 255), 25)
+                cv2.putText(game_image, f"Hand: {players[1].cards_value}",
+                            (bottom_right_center_position[0], bottom_right_center_position[1] - 90), font, 2, (0, 0, 0),
+                            8)
                 player_text = f"Result: {result}"
                 cv2.putText(game_image, player_text,
                             bottom_right_center_position, font, 2, (255, 255, 255), 25)
                 cv2.putText(game_image, player_text,
                             bottom_right_center_position, font, 2, (0, 0, 0), 8)
+
+            if players[1].coins:
+                players[1].calculate_coins_value()
+
+                if result == "Won":
+                    bet_print = f"Won {players[1].coins_value}"
+                    if not game_state_manager.profit_updated_this_round_1:
+                        players_total_profit[1] += players[1].coins_value
+                        game_state_manager.profit_updated_this_round_1 = True
+                elif result == "Push":
+                    pass
+                else:
+                    bet_print = f"Lost {players[1].coins_value}"
+                    if not game_state_manager.profit_updated_this_round_1:
+                        players_total_profit[1] -= players[1].coins_value
+                        game_state_manager.profit_updated_this_round_1 = True
+
+                cv2.putText(game_image, f"Bet result: {bet_print}",
+                            (bottom_right_center_position[0] - 90, bottom_right_center_position[1] - 90), font, 2,
+                            (255, 255, 255), 25)
+                cv2.putText(game_image, f"Bet:: {bet_print}",
+                            (bottom_right_center_position[0] - 90, bottom_right_center_position[1] - 90), font, 2,
+                            (0, 0, 0),
+                            8)
 
             if not game_state_manager.count_updated_this_round:
                 all_cards = sum([player.hand for player in players], []) + dealer.hand
@@ -371,13 +463,13 @@ def process_game(dealer_cards, players_cards, input_image, running_count, true_c
                         (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 25)
             cv2.putText(game_image, "Dealer Drawing....",
                         (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
-            cv2.putText(game_image, f"Dealer's Hand: {dealer.value}",
+            cv2.putText(game_image, f"Dealer's Hand: {dealer.cards_value}",
                         (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (255, 255, 255), 25)
-            cv2.putText(game_image, f"Dealer's Hand: {dealer.value}",
+            cv2.putText(game_image, f"Dealer's Hand: {dealer.cards_value}",
                         (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (0, 0, 0), 8)
 
     # Handle any other unexpected state
     else:
         pass
 
-    return game_image, running_count, true_count, game_state_manager, decks_remaining
+    return game_image, running_count, true_count, game_state_manager, decks_remaining, players_total_profit

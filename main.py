@@ -3,8 +3,8 @@ import cv2
 import numpy as np
 import playingBoard
 import cards as cards_file
-import player
 import coins as coins_file
+import player
 
 
 def read_and_write_video():
@@ -85,9 +85,13 @@ def read_from_video(video_path):
         true_count = 0
         game_state_manager = player.GameState()
         decks_remaining = 2
+        players_total_profit = [0,0]
         previous_dealer_cards = []
         previous_players_cards = [[], []]
         previous_all_cards = []
+        previous_dealer_coins = []
+        previous_players_coins = [[], []]
+        previous_all_coins = []
 
         while True:
             # Capture next frames
@@ -106,25 +110,26 @@ def read_from_video(video_path):
                                                         (playing_board.width, playing_board.height))
 
                 # apply card detection
-                cards, dealer_cards, players_cards, marked_cards_board = cards_file.Detect_cards(transformed_board)
+                coins, dealer_coins, players_coins, marked_coins_board = coins_file.detect_coins(transformed_board)
 
-                # apply coin detection
-                coins, dealer_coins, player_coins, marked_cards_coins_board = coins_file.detect_coins(marked_cards_board)
+                # apply card detection
+                cards, dealer_cards, players_cards, marked_cards_board = cards_file.detect_cards(transformed_board)
 
                 # apply the game logic
                 all_cards = dealer_cards + players_cards[0] + players_cards[1]
-
                 # no situation of fewer cards than previous should happen in the middle of the game, card is not detected
                 if len(previous_all_cards) > len(all_cards) > 0 and (
                         game_state_manager.is_playing() or game_state_manager.is_result()):
-                    game_image, running_count, true_count, game_state_manager, decks_remaining = player.process_game(
-                        previous_dealer_cards, previous_players_cards, marked_cards_coins_board, running_count, true_count,
+                    game_image, running_count, true_count, game_state_manager, decks_remaining, players_total_profit = player.process_game(
+                        previous_dealer_cards, previous_players_cards, previous_dealer_coins, previous_players_coins,
+                        marked_cards_board, running_count, true_count,
                         game_state_manager,
-                        decks_remaining)
+                        decks_remaining, players_total_profit)
                 else:
-                    game_image, running_count, true_count, game_state_manager, decks_remaining = player.process_game(
-                        dealer_cards, players_cards, marked_cards_coins_board, running_count, true_count, game_state_manager,
-                        decks_remaining)
+                    game_image, running_count, true_count, game_state_manager, decks_remaining, players_total_profit = player.process_game(
+                        dealer_cards, players_cards, dealer_coins, players_coins, marked_cards_board, running_count,
+                        true_count, game_state_manager,
+                        decks_remaining, players_total_profit)
                     # update previous cards, when normal game is running
                     previous_dealer_cards = dealer_cards
                     previous_players_cards = players_cards
@@ -136,9 +141,6 @@ def read_from_video(video_path):
 
                 # Use cv2.waitKey() to check for keyboard input
                 key = cv2.waitKey(1) & 0xFF
-
-                # Add a delay to match the original video's frame rate
-                cv2.waitKey(30)  # Adjust the delay value as needed
 
                 # if the 'q' key is pressed, break from the loop
                 if key == ord('q'):
@@ -176,6 +178,8 @@ def read_video_from_iphone():
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)  # Set desired frame width
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)  # Set desired frame height
 
+    print(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    print(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     # Check if properties are set successfully
     if cap.get(cv2.CAP_PROP_FRAME_WIDTH) != 1920 or cap.get(cv2.CAP_PROP_FRAME_HEIGHT) != 1080:
         print("Error: Failed to set capture device properties for iPhone video.")
@@ -192,12 +196,17 @@ def read_video_from_iphone():
         print("Press 'b' to reset the board detection.")
 
         running_count = 0
+        skip_frames = 12
         true_count = 0
         game_state_manager = player.GameState()
         decks_remaining = 2
+        players_total_profit = [0,0]
         previous_dealer_cards = []
         previous_players_cards = [[], []]
         previous_all_cards = []
+        previous_dealer_coins = []
+        previous_players_coins = [[], []]
+        previous_all_coins = []
 
         while True:
             # Capture next frames
@@ -210,25 +219,28 @@ def read_video_from_iphone():
 
             transformed_board = cv2.warpPerspective(frame, playing_board.perspective_transform_matrix,
                                                     (playing_board.width, playing_board.height))
-            # apply card detection
-            cards, dealer_cards, players_cards, marked_cards_board = cards_file.Detect_cards(transformed_board)
 
-            # apply coin detection
-            coins, dealer_coins, player_coins, marked_cards_coins_board = coins_file.detect_coins(marked_cards_board)
+            # apply card detection
+            coins, dealer_coins, players_coins, marked_coins_board = coins_file.detect_coins(transformed_board)
+
+            # apply card detection
+            cards, dealer_cards, players_cards, marked_cards_board = cards_file.detect_cards(transformed_board)
 
             # apply the game logic
             all_cards = dealer_cards + players_cards[0] + players_cards[1]
             # no situation of fewer cards than previous should happen in the middle of the game, card is not detected
             if len(previous_all_cards) > len(all_cards) > 0 and (
                     game_state_manager.is_playing() or game_state_manager.is_result()):
-                game_image, running_count, true_count, game_state_manager, decks_remaining = player.process_game(
-                    previous_dealer_cards, previous_players_cards, marked_cards_coins_board, running_count, true_count,
+                game_image, running_count, true_count, game_state_manager, decks_remaining, players_total_profit = player.process_game(
+                    previous_dealer_cards, previous_players_cards, previous_dealer_coins, previous_players_coins,
+                    marked_cards_board, running_count, true_count,
                     game_state_manager,
-                    decks_remaining)
+                    decks_remaining, players_total_profit)
             else:
-                game_image, running_count, true_count, game_state_manager, decks_remaining = player.process_game(
-                    dealer_cards, players_cards, marked_cards_coins_board, running_count, true_count, game_state_manager,
-                    decks_remaining)
+                game_image, running_count, true_count, game_state_manager, decks_remaining, players_total_profit = player.process_game(
+                    dealer_cards, players_cards, dealer_coins, players_coins, marked_cards_board, running_count,
+                    true_count, game_state_manager,
+                    decks_remaining, players_total_profit)
                 # update previous cards, when normal game is running
                 previous_dealer_cards = dealer_cards
                 previous_players_cards = players_cards
@@ -266,11 +278,11 @@ def playBlackJack():
     This function reads the video from the webcam cameras and starts the game
     """
 
-    #read_and_write_video()
+    # read_and_write_video()
     read_video_from_iphone()
-    #read_from_video('clear_background_2.MOV')
-    #read_from_video('IMG_7133.mov')
-    #read_from_video("one_round_game_transformed.mov")
+    #read_from_video('IMG_9232.MOV')
+    # read_from_video('train_files/board_with_tape_one_round.MOV')
+
 
 if __name__ == '__main__':
     playBlackJack()
