@@ -45,7 +45,7 @@ class Participant:
         """Calculate the value of the hand, adjusting for aces as necessary."""
         self.coins_value = 0
         coin_values = {
-            "Red": 1, "Green": 10, "Blue": 100, "White": 1000}
+            "Red": 1, "Green": 10, "Blue": 100, "White": 1000, 'Light': 10, 'Dark': 100}
         for coin in self.coins:
             if coin in coin_values:
                 self.coins_value += coin_values[coin]
@@ -164,7 +164,7 @@ def bet_suggestion(true_count):
     elif float(true_count) <= 3.5:
         return "Bet triple the minimum"
     else:
-        return "Bet as much as you're comfortable with - the count is high!"
+        return "HIGH!!!"
 
 
 def game_results(dealer, player):
@@ -220,57 +220,92 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
             bet_suggestion_text = bet_suggestion(true_count)
 
             cv2.putText(game_image, "Betting Phase",
-                        (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 25)
+                        (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 32)
             cv2.putText(game_image, "Betting Phase",
                         (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
-            cv2.putText(game_image, f"Running count: {running_count}",
-                        (center_of_image[0] - 270, center_of_image[1] + 90),
-                        font, 2, (255, 255, 255), 25)
-            cv2.putText(game_image, f"Running count: {running_count}",
-                        (center_of_image[0] - 270, center_of_image[1] + 90),
-                        font, 2, (0, 0, 0), 8)
-            cv2.putText(game_image, f"True count: {true_count}",
-                        (center_of_image[0] - 270, center_of_image[1] + 180),
-                        font, 2, (255, 255, 255), 25)
-            cv2.putText(game_image, f"True count: {true_count}",
-                        (center_of_image[0] - 270, center_of_image[1] + 180),
+            # cv2.putText(game_image, f"Running count: {running_count}",
+            #             (center_of_image[0] - 270, center_of_image[1] + 90),
+            #             font, 2, (255, 255, 255), 25)
+            # cv2.putText(game_image, f"Running count: {running_count}",
+            #             (center_of_image[0] - 270, center_of_image[1] + 90),
+            #             font, 2, (0, 0, 0), 8)
+            cv2.putText(game_image, f"Count: {true_count}",
+                        (center_of_image[0] - 180, center_of_image[1] + 180),
+                        font, 2, (255, 255, 255), 32)
+            cv2.putText(game_image, f"Count: {true_count}",
+                        (center_of_image[0] - 180, center_of_image[1] + 180),
                         font, 2, (0, 0, 0), 8)
             cv2.putText(game_image, f"Decks Remaining: {format(decks_remaining, '.1f')}",
                         (center_of_image[0] - 270, center_of_image[1] + 270),
-                        font, 2, (255, 255, 255), 25)
+                        font, 2, (255, 255, 255), 32)
             cv2.putText(game_image, f"Decks Remaining: {format(decks_remaining, '.1f')}",
                         (center_of_image[0] - 270, center_of_image[1] + 270),
                         font, 2, (0, 0, 0), 8)
             cv2.putText(game_image, f"Bet Suggestion: {bet_suggestion_text}",
                         (center_of_image[0] - 270, center_of_image[1] + 360),
-                        font, 2, (255, 255, 255), 25)
+                        font, 2, (255, 255, 255), 32)
             cv2.putText(game_image, f"Bet Suggestion: {bet_suggestion_text}",
                         (center_of_image[0] - 270, center_of_image[1] + 360),
                         font, 2, (0, 0, 0), 8)
 
+            # prints the total profit of the game
+            cv2.putText(game_image,
+                        f"Total game profit: {players_total_profit[0]}",
+                        (bottom_left_center_position[0], bottom_left_center_position[1] - 90), font, 1.7,
+                        (255, 255, 255), 32)
+            cv2.putText(game_image,
+                        f"Total game profit: {players_total_profit[0]}",
+                        (bottom_left_center_position[0], bottom_left_center_position[1] - 90), font, 1.7,
+                        (0, 0, 0), 8)
+            cv2.putText(game_image,
+                        f"Total game profit: {players_total_profit[1]}",
+                        (bottom_right_center_position[0] + 200, bottom_right_center_position[1] - 90), font, 1.7,
+                        (255, 255, 255), 32)
+            cv2.putText(game_image,
+                        f"Total game profit: {players_total_profit[1]}",
+                        (bottom_right_center_position[0] + 200, bottom_right_center_position[1] - 90), font, 1.7,
+                        (0, 0, 0), 8)
 
         elif game_state_manager.is_betting():
 
             if players[0].coins:
                 players[0].calculate_coins_value()
                 cv2.putText(game_image,
-                            f"Current Bet: {players[0].coins_value} \n Total profit: {players_total_profit[0]}",
-                            (bottom_left_center_position[0] - 90, bottom_left_center_position[1] - 90), font, 2,
-                            (255, 255, 255), 25)
+                            f"Current Bet: {players[0].coins_value}, Total game profit: {players_total_profit[0]}",
+                            (bottom_left_center_position[0] - 40, bottom_left_center_position[1] - 90), font, 1.7,
+                            (255, 255, 255), 32)
                 cv2.putText(game_image,
-                            f"Current Bet: {players[0].coins_value} \n Total profit: {players_total_profit[0]}",
-                            (bottom_left_center_position[0] - 150, bottom_left_center_position[1] - 90), font, 2,
+                            f"Current Bet: {players[0].coins_value}, Total game profit: {players_total_profit[0]}",
+                            (bottom_left_center_position[0] - 40, bottom_left_center_position[1] - 90), font, 1.7,
+                            (0, 0, 0), 8)
+            else:
+                cv2.putText(game_image,
+                            f"Total game profit: {players_total_profit[0]}",
+                            (bottom_left_center_position[0] , bottom_left_center_position[1] - 90), font, 1.7,
+                            (255, 255, 255), 32)
+                cv2.putText(game_image,
+                            f"Total game profit: {players_total_profit[0]}",
+                            (bottom_left_center_position[0], bottom_left_center_position[1] - 90), font, 1.7,
                             (0, 0, 0), 8)
 
             if players[1].coins:
                 players[1].calculate_coins_value()
                 cv2.putText(game_image,
-                            f"Current Bet: {players[1].coins_value} \n Total profit: {players_total_profit[1]}",
-                            (bottom_right_center_position[0] - 150, bottom_right_center_position[1] - 90), font, 2,
-                            (255, 255, 255), 25)
+                            f"Current Bet: {players[1].coins_value}, Total game profit: {players_total_profit[1]}",
+                            (bottom_right_center_position[0] - 150, bottom_right_center_position[1] - 90), font, 1.7,
+                            (255, 255, 255), 32)
                 cv2.putText(game_image,
-                            f"Current Bet: {players[1].coins_value} \n Total profit: {players_total_profit[1]}",
-                            (bottom_right_center_position[0] - 90, bottom_right_center_position[1] - 90), font, 2,
+                            f"Current Bet: {players[1].coins_value}, Total game profit: {players_total_profit[1]}",
+                            (bottom_right_center_position[0] - 150, bottom_right_center_position[1] - 90), font, 1.7,
+                            (0, 0, 0), 8)
+            else:
+                cv2.putText(game_image,
+                            f"Total game profit: {players_total_profit[1]}",
+                            (bottom_right_center_position[0] + 200, bottom_right_center_position[1] - 90), font, 1.7,
+                            (255, 255, 255), 32)
+                cv2.putText(game_image,
+                            f"Total game profit: {players_total_profit[1]}",
+                            (bottom_right_center_position[0] + 200, bottom_right_center_position[1] - 90), font, 1.7,
                             (0, 0, 0), 8)
 
             if running_count != 0:
@@ -278,43 +313,43 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
                 bet_suggestion_text = bet_suggestion(true_count)
 
                 cv2.putText(game_image, "Betting Phase",
-                            (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 25)
+                            (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 32)
                 cv2.putText(game_image, "Betting Phase",
                             (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
-                cv2.putText(game_image, f"Running count: {running_count}",
-                            (center_of_image[0] - 270, center_of_image[1] + 90),
-                            font, 2, (255, 255, 255), 25)
-                cv2.putText(game_image, f"Running count: {running_count}",
-                            (center_of_image[0] - 270, center_of_image[1] + 90),
-                            font, 2, (0, 0, 0), 8)
-                cv2.putText(game_image, f"True count: {true_count}",
-                            (center_of_image[0] - 270, center_of_image[1] + 180),
-                            font, 2, (255, 255, 255), 25)
-                cv2.putText(game_image, f"True count: {true_count}",
-                            (center_of_image[0] - 270, center_of_image[1] + 180),
+                # cv2.putText(game_image, f"Running count: {running_count}",
+                #             (center_of_image[0] - 270, center_of_image[1] + 90),
+                #             font, 2, (255, 255, 255), 25)
+                # cv2.putText(game_image, f"Running count: {running_count}",
+                #             (center_of_image[0] - 270, center_of_image[1] + 90),
+                #             font, 2, (0, 0, 0), 8)
+                cv2.putText(game_image, f"Count: {true_count}",
+                            (center_of_image[0] - 200, center_of_image[1] + 180),
+                            font, 2, (255, 255, 255), 32)
+                cv2.putText(game_image, f"Count: {true_count}",
+                            (center_of_image[0] - 200, center_of_image[1] + 180),
                             font, 2, (0, 0, 0), 8)
                 cv2.putText(game_image, f"Decks Remaining: {format(decks_remaining, '.1f')}",
                             (center_of_image[0] - 270, center_of_image[1] + 270),
-                            font, 2, (255, 255, 255), 25)
+                            font, 2, (255, 255, 255), 32)
                 cv2.putText(game_image, f"Decks Remaining: {format(decks_remaining, '.1f')}",
                             (center_of_image[0] - 270, center_of_image[1] + 270),
                             font, 2, (0, 0, 0), 8)
                 cv2.putText(game_image, f"Bet Suggestion: {bet_suggestion_text}",
                             (center_of_image[0] - 270, center_of_image[1] + 360),
-                            font, 2, (255, 255, 255), 25)
+                            font, 2, (255, 255, 255), 32)
                 cv2.putText(game_image, f"Bet Suggestion: {bet_suggestion_text}",
                             (center_of_image[0] - 270, center_of_image[1] + 360),
                             font, 2, (0, 0, 0), 8)
             else:
                 cv2.putText(game_image, "Initial Betting Phase",
-                            (center_of_image[0] - 500, center_of_image[1]), font, 3, (255, 255, 255), 25)
+                            (center_of_image[0] - 500, center_of_image[1]), font, 3, (255, 255, 255), 32)
                 cv2.putText(game_image, "Initial Betting Phase",
                             (center_of_image[0] - 500, center_of_image[1]), font, 3, (0, 0, 0), 8)
-                cv2.putText(game_image, f"Running count: {running_count}",
-                            (center_of_image[0] - 270, center_of_image[1] + 90),
-                            font, 2, (255, 255, 255), 25)
-                cv2.putText(game_image, f"Running count: {running_count}",
-                            (center_of_image[0] - 270, center_of_image[1] + 90),
+                cv2.putText(game_image, f"Count: {running_count}",
+                            (center_of_image[0] - 180, center_of_image[1] + 90),
+                            font, 2, (255, 255, 255), 32)
+                cv2.putText(game_image, f"Count: {running_count}",
+                            (center_of_image[0] - 180, center_of_image[1] + 90),
                             font, 2, (0, 0, 0), 8)
 
         # Additional conditions for betting phase can be added here
@@ -325,12 +360,12 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
         players[1].calculate_cards_value()
         game_state_manager.transition_to_playing()
         cv2.putText(game_image, "Playing Phase",
-                    (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 25)
+                    (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 32)
         cv2.putText(game_image, "Playing Phase",
                     (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
 
         cv2.putText(game_image, f"Dealer's Card: {dealer.cards_value}",
-                    (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (255, 255, 255), 25)
+                    (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (255, 255, 255), 32)
         cv2.putText(game_image, f"Dealer's Card: {dealer.cards_value}",
                     (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (0, 0, 0), 8)
 
@@ -342,7 +377,7 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
             else:
                 player_text = f"Hand: {players[0].cards_value} , {action}"
             cv2.putText(game_image, player_text,
-                        bottom_left_center_position, font, 2, (255, 255, 255), 25)
+                        bottom_left_center_position, font, 2, (255, 255, 255), 32)
             cv2.putText(game_image, player_text,
                         bottom_left_center_position, font, 2, (0, 0, 0), 8)
 
@@ -354,7 +389,7 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
                 player_text = f"Hand: {players[1].cards_value} , {action}"
 
             cv2.putText(game_image, player_text,
-                        bottom_right_center_position, font, 2, (255, 255, 255), 25)
+                        bottom_right_center_position, font, 2, (255, 255, 255), 32)
             cv2.putText(game_image, player_text,
                         bottom_right_center_position, font, 2, (0, 0, 0), 8)
 
@@ -364,11 +399,11 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
         if dealer.cards_value >= 17:
             game_state_manager.transition_to_result()
             cv2.putText(game_image, f"Dealer's Hand: {dealer.cards_value}",
-                        (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (255, 255, 255), 25)
+                        (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (255, 255, 255), 32)
             cv2.putText(game_image, f"Dealer's Hand: {dealer.cards_value}",
                         (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (0, 0, 0), 8)
             cv2.putText(game_image, "Result Phase",
-                        (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 25)
+                        (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 32)
             cv2.putText(game_image, "Result Phase",
                         (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
 
@@ -378,13 +413,13 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
 
                 cv2.putText(game_image, f"Hand: {players[0].cards_value}",
                             (bottom_left_center_position[0], bottom_left_center_position[1] - 90), font, 2,
-                            (255, 255, 255), 25)
+                            (255, 255, 255), 32)
                 cv2.putText(game_image, f"Hand: {players[0].cards_value}",
                             (bottom_left_center_position[0], bottom_left_center_position[1] - 90), font, 2, (0, 0, 0),
                             8)
                 player_text = f"Result: {result}"
                 cv2.putText(game_image, player_text,
-                            bottom_left_center_position, font, 2, (255, 255, 255), 25)
+                            bottom_left_center_position, font, 2, (255, 255, 255), 32)
                 cv2.putText(game_image, player_text,
                             bottom_left_center_position, font, 2, (0, 0, 0), 8)
 
@@ -405,10 +440,10 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
                         game_state_manager.profit_updated_this_round_0 = True
 
                 cv2.putText(game_image, f"Bet result: {bet_print}",
-                            (bottom_left_center_position[0] - 90, bottom_left_center_position[1] - 90), font, 2,
-                            (255, 255, 255), 25)
-                cv2.putText(game_image, f"Bet:: {bet_print}",
-                            (bottom_left_center_position[0] - 90, bottom_left_center_position[1] - 90), font, 2,
+                            (bottom_left_center_position[0] - 75, bottom_left_center_position[1] - 180), font, 2,
+                            (255, 255, 255), 32)
+                cv2.putText(game_image, f"Bet result: {bet_print}",
+                            (bottom_left_center_position[0] - 75, bottom_left_center_position[1] - 180), font, 2,
                             (0, 0, 0),
                             8)
 
@@ -418,13 +453,13 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
 
                 cv2.putText(game_image, f"Hand: {players[1].cards_value}",
                             (bottom_right_center_position[0], bottom_right_center_position[1] - 90), font, 2,
-                            (255, 255, 255), 25)
+                            (255, 255, 255), 32)
                 cv2.putText(game_image, f"Hand: {players[1].cards_value}",
                             (bottom_right_center_position[0], bottom_right_center_position[1] - 90), font, 2, (0, 0, 0),
                             8)
                 player_text = f"Result: {result}"
                 cv2.putText(game_image, player_text,
-                            bottom_right_center_position, font, 2, (255, 255, 255), 25)
+                            bottom_right_center_position, font, 2, (255, 255, 255), 32)
                 cv2.putText(game_image, player_text,
                             bottom_right_center_position, font, 2, (0, 0, 0), 8)
 
@@ -445,10 +480,10 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
                         game_state_manager.profit_updated_this_round_1 = True
 
                 cv2.putText(game_image, f"Bet result: {bet_print}",
-                            (bottom_right_center_position[0] - 90, bottom_right_center_position[1] - 90), font, 2,
-                            (255, 255, 255), 25)
-                cv2.putText(game_image, f"Bet:: {bet_print}",
-                            (bottom_right_center_position[0] - 90, bottom_right_center_position[1] - 90), font, 2,
+                            (bottom_right_center_position[0] - 75, bottom_right_center_position[1] - 180), font, 2,
+                            (255, 255, 255), 32)
+                cv2.putText(game_image, f"Bet result: {bet_print}",
+                            (bottom_right_center_position[0] - 75, bottom_right_center_position[1] - 180), font, 2,
                             (0, 0, 0),
                             8)
 
@@ -460,11 +495,11 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
 
         else:
             cv2.putText(game_image, "Dealer Drawing....",
-                        (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 25)
+                        (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 32)
             cv2.putText(game_image, "Dealer Drawing....",
                         (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
             cv2.putText(game_image, f"Dealer's Hand: {dealer.cards_value}",
-                        (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (255, 255, 255), 25)
+                        (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (255, 255, 255), 32)
             cv2.putText(game_image, f"Dealer's Hand: {dealer.cards_value}",
                         (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (0, 0, 0), 8)
 

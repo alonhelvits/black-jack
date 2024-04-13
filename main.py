@@ -7,57 +7,6 @@ import coins as coins_file
 import player
 
 
-def read_and_write_video():
-    '''
-    This function reads the video from a given file and writes the transformed video to a file
-    :return:
-    '''
-    # Path to the recorded video file
-    video_path = 'train_files/one_round_game.MOV'
-    output_video_path = 'train_files/one_round_game_transformed.mov'  # Path to save the output video
-
-    # Initialize the video capture object
-    cap = cv2.VideoCapture(video_path)
-    # Check if the video capture object is opened successfully
-    if not cap.isOpened():
-        print("Error: Failed to open video file")
-        exit()
-
-    playing_board = playingBoard.get_board(cap)
-
-    # Define the codec and create VideoWriter object
-    fourcc = cv2.VideoWriter_fourcc(*'avc1')  # Specify the codec (codec depends on the extension of the output file)
-    out = cv2.VideoWriter(output_video_path, fourcc, 20.0, (playing_board.width, playing_board.height))
-
-    if playing_board is not None:
-        print("Found the board!!")
-        while True:
-            # Capture next frames
-            ret, frame = cap.read()
-            # Check if the frame is successfully captured
-            if not ret:
-                print("Error: Failed to capture frame")
-                break
-
-            # cv2.imshow("Transformed", frame)
-
-            # Transforming the new read image according to the transformation matrix
-            transformed_board = cv2.warpPerspective(frame, playing_board.perspective_transform_matrix,
-                                                    (playing_board.width, playing_board.height))
-            # Write the transformed frame to the output video
-            out.write(transformed_board)
-
-            # cv2.imshow("Transformed", transformed_board)
-
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-        # Release the webcam and close all OpenCV windows
-        cap.release()
-        out.release()
-        cv2.destroyAllWindows()
-    else:
-        print("Fuck my life")
-
 
 def read_from_video(video_path):
     # Path to the recorded video file
@@ -81,7 +30,7 @@ def read_from_video(video_path):
         print("Press 'b' to reset the board detection.")
 
         running_count = 0
-        skip_frames = 12
+        skip_frames = 300
         true_count = 0
         game_state_manager = player.GameState()
         decks_remaining = 2
@@ -89,9 +38,6 @@ def read_from_video(video_path):
         previous_dealer_cards = []
         previous_players_cards = [[], []]
         previous_all_cards = []
-        previous_dealer_coins = []
-        previous_players_coins = [[], []]
-        previous_all_coins = []
 
         while True:
             # Capture next frames
@@ -121,7 +67,7 @@ def read_from_video(video_path):
                 if len(previous_all_cards) > len(all_cards) > 0 and (
                         game_state_manager.is_playing() or game_state_manager.is_result()):
                     game_image, running_count, true_count, game_state_manager, decks_remaining, players_total_profit = player.process_game(
-                        previous_dealer_cards, previous_players_cards, previous_dealer_coins, previous_players_coins,
+                        previous_dealer_cards, previous_players_cards, dealer_coins, players_coins,
                         marked_cards_board, running_count, true_count,
                         game_state_manager,
                         decks_remaining, players_total_profit)
@@ -133,6 +79,8 @@ def read_from_video(video_path):
                     # update previous cards, when normal game is running
                     previous_dealer_cards = dealer_cards
                     previous_players_cards = players_cards
+                    previous_dealer_coins = dealer_coins
+                    previous_players_coins = players_coins
                     previous_all_cards = all_cards
 
                 new_width, new_height = 1200, 800
@@ -149,6 +97,8 @@ def read_from_video(video_path):
                 elif key == ord('r'):
                     running_count = 0
                     true_count = 0
+                    players_total_profit = [0, 0]
+                    decks_remaining = 2
                     print("Deck Reshuffled, Running Count: 0, True Count: 0")
                 elif key == ord('b'):
                     print("Resetting the board detection")
@@ -196,7 +146,6 @@ def read_video_from_iphone():
         print("Press 'b' to reset the board detection.")
 
         running_count = 0
-        skip_frames = 12
         true_count = 0
         game_state_manager = player.GameState()
         decks_remaining = 2
@@ -279,8 +228,8 @@ def playBlackJack():
     """
 
     # read_and_write_video()
-    read_video_from_iphone()
-    #read_from_video('IMG_9232.MOV')
+    #read_video_from_iphone()
+    read_from_video('IMG_9172.MOV')
     # read_from_video('train_files/board_with_tape_one_round.MOV')
 
 
