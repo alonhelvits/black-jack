@@ -279,9 +279,8 @@ def playBlackJack():
     """
 
     # read_and_write_video()
-    read_video_from_iphone()
-    #read_from_video('IMG_9232.MOV')
-    # read_from_video('train_files/board_with_tape_one_round.MOV')
+    #read_video_from_iphone()
+    read_from_video('train_files/IMG_7149.mov')
 
 
 if __name__ == '__main__':

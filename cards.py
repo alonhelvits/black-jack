@@ -17,9 +17,9 @@ rank_templates = {
     'King': cv2.imread('Card_Imgs/King.jpg', cv2.IMREAD_GRAYSCALE),
 }
 
-covered_template_1 = cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
+covered_template_1 = cv2.imread('Card_Imgs/Covered1.jpg', cv2.IMREAD_GRAYSCALE)
 covered_template_2 = cv2.imread('Card_Imgs/Covered_1.jpg', cv2.IMREAD_GRAYSCALE)
-covered_template_3 = cv2.imread('Card_Imgs/cov_from_test.jpg', cv2.IMREAD_GRAYSCALE)
+covered_template_3 = cv2.imread('Card_Imgs/cov_from_test.png', cv2.IMREAD_GRAYSCALE)
 
 
 
