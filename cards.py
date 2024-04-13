@@ -17,7 +17,7 @@ rank_templates = {
     'King': cv2.imread('Card_Imgs/King.jpg', cv2.IMREAD_GRAYSCALE),
 }
 
-covered_template = cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
+covered_template = cv2.imread('Card_Imgs/cov_from_test.png', cv2.IMREAD_GRAYSCALE)
 
 
 class Card:
@@ -33,14 +33,14 @@ class Card:
         self.rank = None
 
 def find_cards(image):
-    covered_card_template = cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
+    covered_card_template = cv2.imread('Card_Imgs/Covered1.jpg', cv2.IMREAD_GRAYSCALE)
 
     BKG_THRESH = 25
     CARD_THRESH = 20 #lower threshold - more sensitive to light digits (white level - thresh)
 
     # Width and height of card corner, where rank and suit are
     CORNER_WIDTH = 63
-    CORNER_HEIGHT = 80
+    CORNER_HEIGHT = 75
 
     # Dimensions of rank train images
     RANK_WIDTH = 72
@@ -92,7 +92,7 @@ def find_cards(image):
         area = cv2.contourArea(contour)
 
         # Filter contours based on area
-        if 30000 < area < 120000 :
+        if 30000 < area < 120000:
             # Approximate the contour to obtain the corners
             peri = cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, 0.01 * peri, True)
@@ -124,7 +124,7 @@ def find_cards(image):
                 covered_diff = int(np.sum(cv2.absdiff(covered_template, warped) / 255))
                 #int(np.sum(diff_img) / 255)
                 # print(covered_diff)
-                if covered_diff < 58000: # check if the card is covered, adjust number for sensitivity
+                if covered_diff < 10000: # check if the card is covered, adjust number for sensitivity
                     rank_img= "Covered"
                     cards.append(Card(np.float32(approx), center, warped, contour, card_width, card_height, rank_img))
                 else:
@@ -318,17 +318,17 @@ def flattener(image, pts, w, h):
     warp = cv2.cvtColor(warp, cv2.COLOR_BGR2GRAY)
 
     return warp
+
 def Detect_cards(input_image):
     # Assume you have an image containing multiple cards called input_image
     #input_image = cv2.imread('test_image.png')
-
+    cards = []
     # Find cards in the input image
     cards = find_cards(input_image)
     marked_frame = input_image.copy()
 
     # Iterate over each detected card
     for card in cards:
-
         # Extract the corner containing the card number
         #card_corner = card.transpose_image[10:50, 10:50]  # Adjust size and position if needed
         #cv2.imshow('Marked Frame', card_corner)

@@ -30,13 +30,13 @@ def detect_coins(image):
 
     # Detect edges using Canny edge detector
     edges = cv2.Canny(blur, 60, 150)
-    cv2.imshow("Detected Circles", edges)
-    cv2.waitKey(0)
+    #cv2.imshow("Detected Circles", edges)
+    #cv2.waitKey(0)
 
 
     # Apply Hough Circle Transform
     circles = cv2.HoughCircles(edges, cv2.HOUGH_GRADIENT, dp=1, minDist=40,
-                               param1=50, param2=43, minRadius=25, maxRadius=50)
+                               param1=50, param2=43, minRadius=10, maxRadius=35)
 
     if circles is not None:
         circles = np.round(circles[0, :]).astype("int")
@@ -69,8 +69,8 @@ def detect_coins(image):
     dealer_coins, player_coins = group_cards_coins(coins, image)
 
     # Display the result
-    #cv2.imshow("Detected Circles", image)
-    #cv2.waitKey(0)
-    #cv2.destroyAllWindows()
+    # cv2.imshow("Detected Circles", image)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
 
     return coins, dealer_coins, player_coins, image

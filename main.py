@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import playingBoard
 import cards as cards_file
+import coins as coins_file
 import player
 
 
@@ -80,7 +81,7 @@ def read_from_video(video_path):
         print("Press 'b' to reset the board detection.")
 
         running_count = 0
-        skip_frames = 12
+        skip_frames = 100
         true_count = 0
         game_state_manager = player.GameState()
         decks_remaining = 2
@@ -106,6 +107,8 @@ def read_from_video(video_path):
 
                 # apply card detection
                 cards, dealer_cards, players_cards, marked_cards_board = cards_file.Detect_cards(transformed_board)
+
+                coins, dealer_coins, players_coins, marked_coins_board = coins_file.detect_coins(transformed_board)
 
                 # apply the game logic
                 all_cards = dealer_cards + players_cards[0] + players_cards[1]
