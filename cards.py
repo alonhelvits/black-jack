@@ -15,8 +15,10 @@ rank_templates = {
     'Jack': cv2.imread('Card_Imgs/Jack.jpg', cv2.IMREAD_GRAYSCALE),
     'Queen': cv2.imread('Card_Imgs/Queen.jpg', cv2.IMREAD_GRAYSCALE),
     'King': cv2.imread('Card_Imgs/King.jpg', cv2.IMREAD_GRAYSCALE),
-    'Covered': cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
 }
+
+covered_template = cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
+
 
 class Card:
     def __init__(self, corners, center, transpose_image, contour,card_width, card_height,rank_img):
@@ -33,12 +35,12 @@ class Card:
 def find_cards(image):
     covered_card_template = cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
 
-    BKG_THRESH = 80
-    CARD_THRESH = 21 #lower threshold - more sensitive to light digits (white level - thresh)
+    BKG_THRESH = 25
+    CARD_THRESH = 20 #lower threshold - more sensitive to light digits (white level - thresh)
 
     # Width and height of card corner, where rank and suit are
-    CORNER_WIDTH = 32
-    CORNER_HEIGHT = 75
+    CORNER_WIDTH = 63
+    CORNER_HEIGHT = 80
 
     # Dimensions of rank train images
     RANK_WIDTH = 72
@@ -80,9 +82,9 @@ def find_cards(image):
         return [], []
 
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
-    # cv2.drawContours(image, contours, -1, (0, 255, 0), 2)
-    # cv2.imshow("asa", image)
-    # cv2.waitKey(1)
+    #cv2.drawContours(image, contours, -1, (0, 255, 0), 2)
+    #cv2.imshow("asa", image)
+    #cv2.waitKey(1)
     cards = []
 
     # Loop over the contours
@@ -113,52 +115,57 @@ def find_cards(image):
                 dst = np.float32([[0, 0], [width, 0], [width, height], [0, height]])
 
                 warped = flattener(image, np.float32(approx), card_width, card_height)
-                # cv2.imshow('Marked Frame', warped) #show all card
-                # cv2.waitKey(1)
+                cv2.imshow('Marked Frame', warped) #show all card
+                cv2.waitKey(1)
 
                 #check if covered card
                 warped_dimensions = warped.shape[:2]
-                resized_covered_card_template = cv2.resize(covered_card_template, (warped_dimensions[1], warped_dimensions[0]))
-                covered_diff = int(np.sum(cv2.absdiff(resized_covered_card_template, warped) / 255))
+                #resized_covered_card_template = cv2.resize(covered_card_template, (warped_dimensions[1], warped_dimensions[0]))
+                covered_diff = int(np.sum(cv2.absdiff(covered_template, warped) / 255))
                 #int(np.sum(diff_img) / 255)
                 # print(covered_diff)
-                if covered_diff < 16000: # check if the card is covered, adjust number for sensitivity
+                if covered_diff < 58000: # check if the card is covered, adjust number for sensitivity
                     rank_img= "Covered"
                     cards.append(Card(np.float32(approx), center, warped, contour, card_width, card_height, rank_img))
                 else:
                     # Grab corner of warped card image and do a 5x zoom
-                    Qcorner = warped[0:CORNER_HEIGHT, 0:CORNER_WIDTH]
+                    Qcorner = warped[8:CORNER_HEIGHT+8, 0:CORNER_WIDTH]
                     Qcorner_zoom = cv2.resize(Qcorner, (0, 0), fx=4, fy=4)
-                    # cv2.imshow('Marked Frame', Qcorner_zoom) #show zoom to corner
-                    # cv2.waitKey(1)
+
+                    cv2.imshow('Qcorner_zoom', Qcorner_zoom)  # show zoom to corner
+                    cv2.waitKey(1)
+                    # Increase contrast using histogram equalization
+                    #equalized_image = cv2.equalizeHist(Qcorner_zoom)
 
                     # Sample known white pixel intensity to determine good threshold level
-                    # white_level = Qcorner_zoom[15, int((CORNER_WIDTH * 4) / 2)]
-                    white_level = np.bincount(Qcorner_zoom.ravel()).argmax()
-                    thresh_level = white_level - CARD_THRESH
+                    white_level = warped[10, card_width//4]
+                    black_level, white_level, _ , _ = cv2.minMaxLoc(Qcorner_zoom)
+                    #white_level = np.bincount(Qcorner_zoom.ravel()).argmax()
+                    #thresh_level = (white_level + black_level)//2 + black_level//5
+                    thresh_level = (white_level + black_level) // 2 + black_level//20
                     if (thresh_level <= 0):
                         thresh_level = 1
-                    retval, query_thresh = cv2.threshold(Qcorner_zoom, thresh_level, 255, cv2.THRESH_BINARY_INV)
+                    retval, Qrank_inv = cv2.threshold(Qcorner_zoom, thresh_level, 255, cv2.THRESH_BINARY_INV)
 
-                    Qrank = query_thresh[20:165, 15:128]
+                    # Qrank = query_thresh[20:165, 5:128]
                     # cv2.imshow('Marked Frame', Qrank)
                     # cv2.waitKey(1)
 
                     # Find rank contour and bounding rectangle, isolate and find largest contour
-                    Qrank_cnts, hier = cv2.findContours(Qrank, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                    Qrank_cnts, hier = cv2.findContours(Qrank_inv, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
                     Qrank_cnts = sorted(Qrank_cnts, key=cv2.contourArea, reverse=True)
 
                     # Find bounding rectangle for largest contour, use it to resize query rank
                     # image to match dimensions of the train rank image
                     if len(Qrank_cnts) != 0:
                         x1, y1, w1, h1 = cv2.boundingRect(Qrank_cnts[0])
-                        Qrank_roi = Qrank[y1:y1 + h1, x1:x1 + w1]
+                        Qrank_roi = Qrank_inv[y1:y1 + h1, x1:x1 + w1]
                         Qrank_sized = cv2.resize(Qrank_roi, (RANK_WIDTH, RANK_HEIGHT), 0, 0)
                         rank_img = Qrank_sized
                     else:
                         continue
-                    # cv2.imshow('Marked Frame', rank_img)
-                    # cv2.waitKey(1)
+                    cv2.imshow('rank img', rank_img)
+                    cv2.waitKey(1)
                     #cv2.imshow('Marked Frame', warped)
                     #cv2.waitKey(1)
                     # Create a Card object and append it to the list
@@ -300,8 +307,8 @@ def flattener(image, pts, w, h):
             temp_rect[2] = pts[2][0]  # Bottom right
             temp_rect[3] = pts[1][0]  # Bottom left
 
-    maxWidth = 200
-    maxHeight = 300
+    maxWidth = 400
+    maxHeight = 600
 
     # Create destination array, calculate perspective transform matrix,
     # and warp card image

@@ -298,9 +298,9 @@ def process_game(dealer_cards, players_cards, input_image, running_count, true_c
         if players[0].hand:
             action = basic_strategy(players[0], dealer)
             if players[0].aces != 0 and players[0].value <= 21:
-                player_text = f"Hand: {players[0].value} / {players[0].value - 10}, {action}"
+                player_text = f"Hand: {players[0].value} / {players[0].value - 10} , {action}"
             else:
-                player_text = f"Hand: {players[0].value}, {action}"
+                player_text = f"Hand: {players[0].value} , {action}"
             cv2.putText(game_image, player_text,
                         bottom_left_center_position, font, 2, (255, 255, 255), 25)
             cv2.putText(game_image, player_text,
@@ -309,9 +309,9 @@ def process_game(dealer_cards, players_cards, input_image, running_count, true_c
         if players[1].hand:
             action = basic_strategy(players[1], dealer)
             if players[1].aces != 0 and players[1].value <= 21:
-                player_text = f"Hand: {players[1].value} / {players[1].value - 10}, {action}"
+                player_text = f"Hand: {players[1].value} / {players[1].value - 10} , {action}"
             else:
-                player_text = f"Hand: {players[1].value}, {action}"
+                player_text = f"Hand: {players[1].value} , {action}"
 
             cv2.putText(game_image, player_text,
                         bottom_right_center_position, font, 2, (255, 255, 255), 25)
