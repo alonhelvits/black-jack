@@ -17,7 +17,11 @@ rank_templates = {
     'King': cv2.imread('Card_Imgs/King.jpg', cv2.IMREAD_GRAYSCALE),
 }
 
-covered_template = cv2.imread('Card_Imgs/cov_from_test.png', cv2.IMREAD_GRAYSCALE)
+covered_template_1 = cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
+covered_template_2 = cv2.imread('Card_Imgs/Covered_1.jpg', cv2.IMREAD_GRAYSCALE)
+covered_template_3 = cv2.imread('Card_Imgs/cov_from_test.jpg', cv2.IMREAD_GRAYSCALE)
+
+
 
 
 class Card:
@@ -33,14 +37,14 @@ class Card:
         self.rank = None
 
 def find_cards(image):
-    covered_card_template = cv2.imread('Card_Imgs/Covered1.jpg', cv2.IMREAD_GRAYSCALE)
+    covered_card_template = cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
 
     BKG_THRESH = 25
     CARD_THRESH = 20 #lower threshold - more sensitive to light digits (white level - thresh)
 
     # Width and height of card corner, where rank and suit are
     CORNER_WIDTH = 63
-    CORNER_HEIGHT = 75
+    CORNER_HEIGHT = 74
 
     # Dimensions of rank train images
     RANK_WIDTH = 72
@@ -92,7 +96,7 @@ def find_cards(image):
         area = cv2.contourArea(contour)
 
         # Filter contours based on area
-        if 30000 < area < 120000:
+        if 34000 < area < 50000 :
             # Approximate the contour to obtain the corners
             peri = cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, 0.01 * peri, True)
@@ -121,10 +125,13 @@ def find_cards(image):
                 #check if covered card
                 warped_dimensions = warped.shape[:2]
                 #resized_covered_card_template = cv2.resize(covered_card_template, (warped_dimensions[1], warped_dimensions[0]))
-                covered_diff = int(np.sum(cv2.absdiff(covered_template, warped) / 255))
+                covered_diff_1 = int(np.sum(cv2.absdiff(covered_template_1, warped) / 255))
+                covered_diff_2 = int(np.sum(cv2.absdiff(covered_template_2, warped) / 255))
+                covered_diff_3 = int(np.sum(cv2.absdiff(covered_template_3, warped) / 255))
+
                 #int(np.sum(diff_img) / 255)
                 # print(covered_diff)
-                if covered_diff < 10000: # check if the card is covered, adjust number for sensitivity
+                if covered_diff_1 < 25000 or covered_diff_2 < 83000 or covered_diff_3 < 20000: # check if the card is covered, adjust number for sensitivity
                     rank_img= "Covered"
                     cards.append(Card(np.float32(approx), center, warped, contour, card_width, card_height, rank_img))
                 else:
@@ -208,6 +215,8 @@ def group_cards_coins(cards, image):
     upper_third_height = board_height / 3
 
     for card in cards:
+        if not isinstance(card, Card):
+            continue
         card_center_y = card.center[1]
         card_center_x = card.center[0]
 
@@ -318,17 +327,17 @@ def flattener(image, pts, w, h):
     warp = cv2.cvtColor(warp, cv2.COLOR_BGR2GRAY)
 
     return warp
-
-def Detect_cards(input_image):
+def detect_cards(input_image):
     # Assume you have an image containing multiple cards called input_image
     #input_image = cv2.imread('test_image.png')
-    cards = []
+
     # Find cards in the input image
     cards = find_cards(input_image)
     marked_frame = input_image.copy()
 
     # Iterate over each detected card
     for card in cards:
+
         # Extract the corner containing the card number
         #card_corner = card.transpose_image[10:50, 10:50]  # Adjust size and position if needed
         #cv2.imshow('Marked Frame', card_corner)
@@ -337,6 +346,8 @@ def Detect_cards(input_image):
         # Classify the card number using the corner template
         #rank = classify_card_number(card_corner, rank_templates)
         #card.rank = match_card(card.rank_img,rank_templates)
+        if not isinstance(card, Card):
+            continue
         card.rank = classify_card_number(card.rank_img,rank_templates)
         # print(card.rank)
         # Draw contours on the original image
