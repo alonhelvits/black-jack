@@ -59,13 +59,10 @@ def board_detection(frame):
     # Find the most common pixel value in the image to use as the background level
 
     thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 7, 2)
-    cv2.imshow("Thresholded", thresh)
-    cv2.waitKey(0)
 
     # Invert the thresholded image
     thresh = cv2.bitwise_not(thresh)
-    cv2.imshow("Thresholded", thresh)
-    cv2.waitKey(0)
+
 
     # Apply morphological operations to connect components
     kernel = np.ones((15, 15), np.uint8)
@@ -81,8 +78,6 @@ def board_detection(frame):
         if stats[i, cv2.CC_STAT_AREA] >= min_size:
             filtered_labels[labels == i] = 255
 
-    cv2.imshow("Filtered Labels", filtered_labels)
-    cv2.waitKey(0)
 
     # Find contours in the edge-detected image
     contours, _ = cv2.findContours(filtered_labels, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
