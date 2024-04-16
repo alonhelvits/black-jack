@@ -99,8 +99,8 @@ def find_cards(image):
                 dst = np.float32([[0, 0], [width, 0], [width, height], [0, height]])
 
                 warped = flattener(image, np.float32(approx), card_width, card_height)
-                # cv2.imshow('Marked Frame', warped) #show all card
-                # cv2.waitKey(1)
+                cv2.imshow('Marked Frame', warped) #show all card
+                cv2.waitKey(1)
 
                 #check if covered card
                 warped_dimensions = warped.shape[:2]
