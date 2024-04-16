@@ -22,9 +22,15 @@ covered_template_1 = cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
 covered_template_2 = cv2.imread('Card_Imgs/Covered_1.jpg', cv2.IMREAD_GRAYSCALE)
 covered_template_3 = cv2.imread('Card_Imgs/cov_from_test.jpg', cv2.IMREAD_GRAYSCALE)
 
+queen_template_1 = cv2.imread('Card_Imgs/queen_spade.jpg', cv2.IMREAD_GRAYSCALE)
+queen_template_2 = cv2.imread('Card_Imgs/queen_heart.jpg', cv2.IMREAD_GRAYSCALE)
+queen_template_3 = cv2.imread('Card_Imgs/queen_diamond.jpg', cv2.IMREAD_GRAYSCALE)
+queen_template_4 = cv2.imread('Card_Imgs/queen_club.jpg', cv2.IMREAD_GRAYSCALE)
+
+
 
 class Card:
-    def __init__(self, corners, center, transpose_image, contour,card_width, card_height,rank_img):
+    def __init__(self, corners, center, transpose_image, contour,card_width, card_height,rank_img, warped):
         self.corners = corners
         self.center = center
         self.transpose_image = transpose_image
@@ -32,6 +38,7 @@ class Card:
         self.card_width = card_width
         self.card_height = card_height
         self.rank_img = rank_img
+        self.warped = warped
         self.group = None
         self.rank = None
 
@@ -175,7 +182,7 @@ def find_cards(image):
                     #cv2.imshow('Marked Frame', warped)
                     #cv2.waitKey(1)
                     # Create a Card object and append it to the list
-                    cards.append(Card(np.float32(approx), center, warped, contour,card_width, card_height,rank_img))
+                    cards.append(Card(np.float32(approx), center, warped, contour,card_width, card_height,rank_img, warped))
     return cards
 
 def classify_card_number(card_rank_image, rank_templates):
@@ -231,7 +238,7 @@ def group_cards(cards, image):
 
     return dealer_cards, [player1_cards, player2_cards]
 
-def match_card(card, rank_templates):
+def match_card(card, rank_templates, warped):
     #card_corner_template_gray = 255 - cv2.cvtColor(card, cv2.COLOR_BGR2GRAY)
     card_corner_template_gray = card
     RANK_DIFF_MAX = 100000
@@ -257,6 +264,15 @@ def match_card(card, rank_templates):
     if (best_rank_match_diff < RANK_DIFF_MAX):
         best_rank_match_name = best_rank_name
     # print(rank_diff)
+
+    if best_rank_match_name == "Nine" or best_rank_match_name == "Ten" or best_rank_match_name == "Queen":
+        queen_diff_1 = int(np.sum(cv2.absdiff(queen_template_1, warped) / 255))
+        queen_diff_2 = int(np.sum(cv2.absdiff(queen_template_2, warped) / 255))
+        queen_diff_3 = int(np.sum(cv2.absdiff(queen_template_3, warped) / 255))
+        queen_diff_4 = int(np.sum(cv2.absdiff(queen_template_4, warped) / 255))
+        if queen_diff_1 < 20000 or queen_diff_2 < 20000 or queen_diff_3 < 20000 or queen_diff_4 < 20000:
+            best_rank_match_name = "Queen"
+
     return best_rank_match_name
 
 def flattener(image, pts, w, h):
@@ -347,7 +363,7 @@ def detect_cards(input_image):
         #card.rank = match_card(card.rank_img,rank_templates)
         if not isinstance(card, Card):
             continue
-        card.rank = classify_card_number(card.rank_img,rank_templates)
+        card.rank = classify_card_number(card.rank_img,rank_templates. card.warped)
         # print(card.rank)
         # Draw contours on the original image
         cv2.drawContours(marked_frame, [card.contour], -1, (255, 0, 0), 3)
