@@ -22,10 +22,10 @@ covered_template_1 = cv2.imread('Card_Imgs/Covered1.jpg', cv2.IMREAD_GRAYSCALE)
 covered_template_2 = cv2.imread('Card_Imgs/Covered_1.jpg', cv2.IMREAD_GRAYSCALE)
 covered_template_3 = cv2.imread('Card_Imgs/cov_from_test.png', cv2.IMREAD_GRAYSCALE)
 
-queen_template_1 = cv2.imread('Card_Imgs/queen_spade.jpg', cv2.IMREAD_GRAYSCALE)
-queen_template_2 = cv2.imread('Card_Imgs/queen_heart.jpg', cv2.IMREAD_GRAYSCALE)
-queen_template_3 = cv2.imread('Card_Imgs/queen_diamond.jpg', cv2.IMREAD_GRAYSCALE)
-queen_template_4 = cv2.imread('Card_Imgs/queen_club.jpg', cv2.IMREAD_GRAYSCALE)
+queen_template_1 = cv2.imread('Card_Imgs/queen_spade.png', cv2.IMREAD_GRAYSCALE)
+queen_template_2 = cv2.imread('Card_Imgs/queen_heart.png', cv2.IMREAD_GRAYSCALE)
+queen_template_3 = cv2.imread('Card_Imgs/queen_diamond.png', cv2.IMREAD_GRAYSCALE)
+queen_template_4 = cv2.imread('Card_Imgs/queen_club.png', cv2.IMREAD_GRAYSCALE)
 
 
 
@@ -138,7 +138,7 @@ def find_cards(image):
                 # print(covered_diff)
                 if covered_diff_1 < 25000 or covered_diff_2 < 83000 or covered_diff_3 < 20000: # check if the card is covered, adjust number for sensitivity
                     rank_img= "Covered"
-                    cards.append(Card(np.float32(approx), center, warped, contour, card_width, card_height, rank_img))
+                    cards.append(Card(np.float32(approx), center, warped, contour, card_width, card_height, rank_img, warped))
                 else:
                     # Grab corner of warped card image and do a 5x zoom
                     Qcorner = warped[8:CORNER_HEIGHT+8, 0:CORNER_WIDTH]
@@ -154,10 +154,29 @@ def find_cards(image):
                     black_level, white_level, _ , _ = cv2.minMaxLoc(Qcorner_zoom)
                     #white_level = np.bincount(Qcorner_zoom.ravel()).argmax()
                     #thresh_level = (white_level + black_level)//2 + black_level//5
-                    thresh_level = (white_level + black_level) // 2 + black_level//20
+                    thresh_level = (white_level + black_level) // 2 + black_level//16 + 12
                     if (thresh_level <= 0):
                         thresh_level = 1
                     retval, Qrank_inv = cv2.threshold(Qcorner_zoom, thresh_level, 255, cv2.THRESH_BINARY_INV)
+                    cv2.imshow('Qrank_inv', Qrank_inv)
+                    cv2.waitKey(1)
+
+                    #Qrank_inv = cv2.bitwise_not(Qrank_inv)
+
+                    # kernel = np.ones((9, 9), np.uint8)
+                    #
+                    # tophat = cv2.morphologyEx(Qrank_inv, cv2.MORPH_CLOSE, kernel)
+                    #
+                    # num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(tophat, connectivity=8)
+                    #
+                    # filtered_labels = np.zeros_like(labels, dtype=np.uint8)
+                    # for i in range(1, num_labels):
+                    #     filtered_labels[labels == i] = 255
+                    #
+                    # Qrank_inv = filtered_labels
+
+                    # cv2.imshow("Filtered Labels", filtered_labels)
+                    # cv2.waitKey(0)
 
                     # Qrank = query_thresh[20:165, 5:128]
                     # cv2.imshow('Marked Frame', Qrank)
@@ -184,7 +203,7 @@ def find_cards(image):
                     cards.append(Card(np.float32(approx), center, warped, contour,card_width, card_height,rank_img, warped))
     return cards
 
-def classify_card_number(card_rank_image, rank_templates):
+def classify_card_number(card_rank_image, rank_templates, warped):
     best_match_name = "Unknown"
     best_match_diff = 4000  # Initialize with a large value
 
@@ -207,6 +226,15 @@ def classify_card_number(card_rank_image, rank_templates):
             if rank_diff < best_match_diff:
                 best_match_diff = rank_diff
                 best_match_name = rank
+
+    if best_match_name == "Nine" or best_match_name == "Ten" or best_match_name == "Queen":
+        queen_diff_1 = int(np.sum(cv2.absdiff(queen_template_1, warped) / 255))
+        queen_diff_2 = int(np.sum(cv2.absdiff(queen_template_2, warped) / 255))
+        queen_diff_3 = int(np.sum(cv2.absdiff(queen_template_3, warped) / 255))
+        queen_diff_4 = int(np.sum(cv2.absdiff(queen_template_4, warped) / 255))
+        if queen_diff_1 < 38000 or queen_diff_2 < 38000 or queen_diff_3 < 38000 or queen_diff_4 < 38000:
+            best_match_name = "Queen"
+
     return best_match_name
 
 
@@ -237,42 +265,6 @@ def group_cards(cards, image):
 
     return dealer_cards, [player1_cards, player2_cards]
 
-def match_card(card, rank_templates, warped):
-    #card_corner_template_gray = 255 - cv2.cvtColor(card, cv2.COLOR_BGR2GRAY)
-    card_corner_template_gray = card
-    RANK_DIFF_MAX = 100000
-    best_rank_match_diff = 1000000000
-    best_rank_match_name = "Unknown"
-    i = 0
-
-    for rank, rank_template in rank_templates.items():
-        # Resize the rank template to match the size of the card corner template
-        resized_rank_template = cv2.resize(rank_template, (card_corner_template_gray.shape[1], card_corner_template_gray.shape[0]))
-        #cv2.imshow('Marked Frame', card_corner_template_gray)
-        #cv2.waitKey(1)  # Allow time for the window to update
-        #cv2.imshow('Marked Frame', resized_rank_template)
-        #cv2.waitKey(1)
-        diff_img = cv2.absdiff(card_corner_template_gray, resized_rank_template)
-        rank_diff = int(np.sum(diff_img) / 255)
-
-        if rank_diff < best_rank_match_diff:
-            best_rank_diff_img = diff_img
-            best_rank_match_diff = rank_diff
-            best_rank_name = rank
-
-    if (best_rank_match_diff < RANK_DIFF_MAX):
-        best_rank_match_name = best_rank_name
-    # print(rank_diff)
-
-    if best_rank_match_name == "Nine" or best_rank_match_name == "Ten" or best_rank_match_name == "Queen":
-        queen_diff_1 = int(np.sum(cv2.absdiff(queen_template_1, warped) / 255))
-        queen_diff_2 = int(np.sum(cv2.absdiff(queen_template_2, warped) / 255))
-        queen_diff_3 = int(np.sum(cv2.absdiff(queen_template_3, warped) / 255))
-        queen_diff_4 = int(np.sum(cv2.absdiff(queen_template_4, warped) / 255))
-        if queen_diff_1 < 20000 or queen_diff_2 < 20000 or queen_diff_3 < 20000 or queen_diff_4 < 20000:
-            best_rank_match_name = "Queen"
-
-    return best_rank_match_name
 
 def flattener(image, pts, w, h):
     """Flattens an image of a card into a top-down 200x300 perspective.
@@ -362,7 +354,7 @@ def detect_cards(input_image):
         #card.rank = match_card(card.rank_img,rank_templates)
         if not isinstance(card, Card):
             continue
-        card.rank = classify_card_number(card.rank_img,rank_templates. card.warped)
+        card.rank = classify_card_number(card.rank_img,rank_templates, card.warped)
         # print(card.rank)
         # Draw contours on the original image
         cv2.drawContours(marked_frame, [card.contour], -1, (255, 0, 0), 3)

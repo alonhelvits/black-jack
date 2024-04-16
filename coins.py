@@ -61,7 +61,7 @@ def detect_coins(image):
 
                 # Calculate average intensity of each channel
                 avg_color = np.mean(roi, axis=(0, 1))  # Calculate mean along axis 0 and 1 (height and width)
-
+                avg_color[0] -= 10
                 # Determine the color based on the average intensity of each channel
                 if avg_color[0] > avg_color[1] and avg_color[0] > avg_color[2]:
                     color = "Blue"

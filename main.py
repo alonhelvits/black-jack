@@ -144,6 +144,7 @@ def read_video_from_iphone():
         print("Press 'q' to quit the game.")
         print("Press 'r' to reshuffle the deck.")
         print("Press 'b' to reset the board detection.")
+        print("Press 'p' to reset the players total profit.")
 
         running_count = 0
         true_count = 0
@@ -184,12 +185,12 @@ def read_video_from_iphone():
                     previous_dealer_cards, previous_players_cards, previous_dealer_coins, previous_players_coins,
                     marked_cards_board, running_count, true_count,
                     game_state_manager,
-                    decks_remaining, players_total_profit)
+                    decks_remaining, players_total_profit, previous_players_cards, previous_dealer_cards)
             else:
                 game_image, running_count, true_count, game_state_manager, decks_remaining, players_total_profit = player.process_game(
                     dealer_cards, players_cards, dealer_coins, players_coins, marked_cards_board, running_count,
                     true_count, game_state_manager,
-                    decks_remaining, players_total_profit)
+                    decks_remaining, players_total_profit, previous_players_cards, previous_dealer_cards)
                 # update previous cards, when normal game is running
                 previous_dealer_cards = dealer_cards
                 previous_players_cards = players_cards
@@ -206,6 +207,9 @@ def read_video_from_iphone():
             if key == ord('q'):
                 break
             # if the 'i' key is pressed, perform an action
+            elif key == ord('p'):
+                print("Resetting players total profit")
+                players_total_profit = [0, 0]
             elif key == ord('r'):
                 running_count = 0
                 true_count = 0

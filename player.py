@@ -182,7 +182,7 @@ def game_results(dealer, player):
 
 def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
                  input_image, running_count, true_count, game_state_manager, decks_remaining,
-                 players_total_profit):
+                 players_total_profit, previous_players_cards, previous_dealer_cards):
     dealer, players = create_game(dealer_cards, players_cards, dealer_coins, players_coins)
     game_image = input_image.copy()
 
@@ -396,7 +396,7 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
 
     elif len(dealer.hand) >= 2 and "Covered" not in dealer.hand:
         dealer.calculate_cards_value()
-        if dealer.cards_value >= 17:
+        if dealer.cards_value >= 17 and dealer_cards == previous_dealer_cards:
             game_state_manager.transition_to_result()
             cv2.putText(game_image, f"Dealer's Hand: {dealer.cards_value}",
                         (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (255, 255, 255), 32)
@@ -432,6 +432,7 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
                         players_total_profit[0] += players[0].coins_value
                         game_state_manager.profit_updated_this_round_0 = True
                 elif result == "Push":
+                    bet_print = "Draw"
                     pass
                 else:
                     bet_print = f"Lost {players[0].coins_value}"
@@ -472,6 +473,7 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
                         players_total_profit[1] += players[1].coins_value
                         game_state_manager.profit_updated_this_round_1 = True
                 elif result == "Push":
+                    bet_print = "Draw"
                     pass
                 else:
                     bet_print = f"Lost {players[1].coins_value}"
