@@ -1,8 +1,8 @@
-
 import cv2
 import numpy as np
+from cards import group_cards_coins
 
-class Coin:
+class Coins:
     def __init__(self, radius, center, rank):
         self.radius = radius
         self.center = center
@@ -13,32 +13,6 @@ class Coin:
         self.group = group
 
 
-def group_coins(coins, image):
-    dealer_coins = []
-    player1_coins = []
-    player2_coins = []
-    board_height, board_width = image.shape[:2]
-
-    upper_third_height = board_height / 3
-
-    for coin in coins:
-        if not isinstance(coin, Coin):
-            continue
-        coin_center_y = coin.center[1]
-        coin_center_x = coin.center[0]
-
-        # Check if the card is in the upper third of the image
-        if coin_center_y < upper_third_height:
-            dealer_coins.append(coin.rank)
-        else:
-            # Check if the card is on the left or right side of the image
-            if coin_center_x < board_width / 2:
-                player1_coins.append(coin.rank)
-            else:
-                player2_coins.append(coin.rank)
-
-    return dealer_coins, [player1_coins, player2_coins]
-
 def detect_coins(image):
     MIN_COIN_AREA = 1000
     MAX_COIN_AREA = 10000
@@ -46,6 +20,19 @@ def detect_coins(image):
 
     # Convert the image to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    #Apply Gaussian blur to the grayscale image to reduce noise
+    blurred = cv2.medianBlur(gray, 9)
+    blurred = cv2.bilateralFilter(blurred, 11, 17, 17)
+
+    #Detect edges using the Canny edge detector with tuned thresholds
+    edges = cv2.Canny(blurred, 30, 150)
+
+    #Apply morphological closing to enhance edge connectivity
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
+    cv2.imshow("Edges", edges)
+    cv2.waitKey(0)
 
     # Detect circles using Hough Circle Transform with adjusted parameters
     circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, dp=1, minDist=50,
@@ -55,29 +42,28 @@ def detect_coins(image):
         circles = np.round(circles[0, :]).astype("int")
         for (x, y, r) in circles:
             # Draw the circle and its center
-            if y > 800:
-                cv2.circle(image, (x, y), r, (0, 0, 255), 4)
-                cv2.circle(image, (x, y), 2, (0, 0, 255), 3)
+            cv2.circle(image, (x, y), r, (0, 255, 0), 2)
+            cv2.circle(image, (x, y), 2, (0, 0, 255), 3)
 
-                # Extract ROI for the circle
-                roi = gray[y - r:y + r, x - r:x + r]
+            # Extract ROI for the circle
+            roi = gray[y - r:y + r, x - r:x + r]
 
-                # Calculate average color in the ROI
-                avg_color = np.mean(roi)
+            # Calculate average color in the ROI
+            avg_color = np.mean(roi)
 
-                # Determine the color based on the average color values
-                if avg_color > 100:
-                    color = "Light"
-                else:
-                    color = "Dark"
+            # Determine the color based on the average color values
+            if avg_color > 100:
+                color = "Light"
+            else:
+                color = "Dark"
 
-                coins.append(Coin(r, (x, y), color))
+            coins.append(Coins(r, (x, y), color))
 
-    dealer_coins, players_coins = group_coins(coins, image)
+    dealer_coins, player_coins = group_cards_coins(coins, image)
 
     # Display the result
     # cv2.imshow("Detected Circles", image)
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
 
-    return coins, dealer_coins, players_coins, image
+    return coins, dealer_coins, player_coins, image
