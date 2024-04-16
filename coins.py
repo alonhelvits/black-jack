@@ -56,12 +56,19 @@ def detect_coins(image):
         for (x, y, r) in circles:
             # Draw the circle and its center
             if y > 800:
-                # Extract ROI for the circle
-                roi = image[y - r:y + r, x - r:x + r]
+                # Create a mask for the circular ROI
+                mask = np.zeros_like(image)
+                cv2.circle(mask, (x, y), r, (255, 255, 255), thickness=-1)  # Create a filled circle in the mask
+
+                # Apply the mask to the original image
+                masked_image = cv2.bitwise_and(image, mask)
+
+                # Extract ROI for the circle using the masked image
+                roi = masked_image[y - r:y + r, x - r:x + r]
 
                 # Calculate average intensity of each channel
                 avg_color = np.mean(roi, axis=(0, 1))  # Calculate mean along axis 0 and 1 (height and width)
-                avg_color[0] -= 10
+                avg_color[0] -= 13
                 # Determine the color based on the average intensity of each channel
                 if avg_color[0] > avg_color[1] and avg_color[0] > avg_color[2]:
                     color = "Blue"

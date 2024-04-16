@@ -196,7 +196,7 @@ def read_video_from_iphone():
                 previous_players_cards = players_cards
                 previous_all_cards = all_cards
 
-            new_width, new_height = 1200, 800
+            new_width, new_height = 4800, 3200
             resized_image = cv2.resize(game_image, (new_width, new_height))
             cv2.imshow("Detected Cards", resized_image)
 

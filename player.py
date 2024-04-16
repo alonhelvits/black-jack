@@ -89,6 +89,7 @@ class GameState:
     def __init__(self):
         self.current_state = "betting"
         self.count_updated_this_round = False
+        self.result_state_this_round = False
         self.profit_updated_this_round_0 = False
         self.profit_updated_this_round_1 = False
         self.current_cards = []
@@ -97,6 +98,7 @@ class GameState:
     def transition_to_betting(self):
         self.current_state = "betting"
         self.count_updated_this_round = False
+        self.result_state_this_round = False
         self.profit_updated_this_round_0 = False
         self.profit_updated_this_round_1 = False
 
@@ -128,9 +130,9 @@ def basic_strategy(player, dealer):
     # Simple Basic Strategy Logic
     if player.cards_value > 21:  # Busted already
         return 'Busted..'
-    elif player.cards_value == 21:  # Always stand on 21
+    elif player.cards_value == 21 and len(player.hand) == 2:  # Always stand on 21
         return 'BlackJack!'
-    elif 17 <= player.cards_value <= 20:  # Stand on 17 or higher
+    elif 17 <= player.cards_value <= 21:  # Stand on 17 or higher
         return 'Stand'
     elif player.cards_value <= 11:  # Always hit 11 or less
         return 'Hit'
@@ -292,11 +294,11 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
                 players[1].calculate_coins_value()
                 cv2.putText(game_image,
                             f"Current Bet: {players[1].coins_value}, Total game profit: {players_total_profit[1]}",
-                            (bottom_right_center_position[0] - 150, bottom_right_center_position[1] - 90), font, 1.7,
+                            (bottom_right_center_position[0] - 200, bottom_right_center_position[1] - 90), font, 1.7,
                             (255, 255, 255), 32)
                 cv2.putText(game_image,
                             f"Current Bet: {players[1].coins_value}, Total game profit: {players_total_profit[1]}",
-                            (bottom_right_center_position[0] - 150, bottom_right_center_position[1] - 90), font, 1.7,
+                            (bottom_right_center_position[0] - 200, bottom_right_center_position[1] - 90), font, 1.7,
                             (0, 0, 0), 8)
             else:
                 cv2.putText(game_image,
@@ -372,7 +374,7 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
         # calculate basic strategy for each player, and display the recommended action
         if players[0].hand:
             action = basic_strategy(players[0], dealer)
-            if players[0].aces != 0 and players[0].cards_value <= 21:
+            if players[0].aces != 0 and players[0].cards_value < 21:
                 player_text = f"Hand: {players[0].cards_value} / {players[0].cards_value - 10} , {action}"
             else:
                 player_text = f"Hand: {players[0].cards_value} , {action}"
@@ -383,7 +385,7 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
 
         if players[1].hand:
             action = basic_strategy(players[1], dealer)
-            if players[1].aces != 0 and players[1].cards_value <= 21:
+            if players[1].aces != 0 and players[1].cards_value < 21:
                 player_text = f"Hand: {players[1].cards_value} / {players[1].cards_value - 10} , {action}"
             else:
                 player_text = f"Hand: {players[1].cards_value} , {action}"
@@ -396,7 +398,8 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
 
     elif len(dealer.hand) >= 2 and "Covered" not in dealer.hand:
         dealer.calculate_cards_value()
-        if dealer.cards_value >= 17 and dealer_cards == previous_dealer_cards:
+        if (dealer.cards_value >= 17 and dealer_cards == previous_dealer_cards) or game_state_manager.result_state_this_round:
+            game_state_manager.result_state_this_round = True
             game_state_manager.transition_to_result()
             cv2.putText(game_image, f"Dealer's Hand: {dealer.cards_value}",
                         (center_of_image[0] - 250, center_of_image[1] - 150), font, 2, (255, 255, 255), 32)
@@ -425,12 +428,20 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
 
             if players[0].coins:
                 players[0].calculate_coins_value()
-
                 if result == "Won":
-                    bet_print = f"Won {players[0].coins_value}"
                     if not game_state_manager.profit_updated_this_round_0:
-                        players_total_profit[0] += players[0].coins_value
                         game_state_manager.profit_updated_this_round_0 = True
+                        if players[0].cards_value == 21 and len(players[0].hand) == 2:
+                            players_total_profit[0] += players[0].coins_value * 1.5
+                            bet_print = f"Won {players[0].coins_value * 1.5}"
+                        else:
+                            players_total_profit[0] += players[0].coins_value
+                            bet_print = f"Won {players[0].coins_value}"
+                    else:
+                        if players[0].cards_value == 21 and len(players[0].hand):
+                            bet_print = f"Won {players[0].coins_value * 1.5}"
+                        else:
+                            bet_print = f"Won {players[0].coins_value}"
                 elif result == "Push":
                     bet_print = "Draw"
                     pass
@@ -466,12 +477,20 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
 
             if players[1].coins:
                 players[1].calculate_coins_value()
-
                 if result == "Won":
-                    bet_print = f"Won {players[1].coins_value}"
                     if not game_state_manager.profit_updated_this_round_1:
-                        players_total_profit[1] += players[1].coins_value
                         game_state_manager.profit_updated_this_round_1 = True
+                        if players[1].cards_value == 21 and len(players[1].hand):
+                            players_total_profit[1] += players[1].coins_value * 1.5
+                            bet_print = f"Won {players[1].coins_value * 1.5}"
+                        else:
+                            players_total_profit[1] += players[1].coins_value
+                            bet_print = f"Won {players[0].coins_value}"
+                    else:
+                        if players[0].cards_value == 21 and len(players[1].hand):
+                            bet_print = f"Won {players[1].coins_value * 1.5}"
+                        else:
+                            bet_print = f"Won {players[1].coins_value}"
                 elif result == "Push":
                     bet_print = "Draw"
                     pass
