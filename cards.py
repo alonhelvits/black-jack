@@ -36,7 +36,6 @@ class Card:
         self.rank = None
 
 def find_cards(image):
-    covered_card_template = cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
 
     BKG_THRESH = 25
     CARD_THRESH = 20 #lower threshold - more sensitive to light digits (white level - thresh)

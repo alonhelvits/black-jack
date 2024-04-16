@@ -54,35 +54,39 @@ def board_detection(frame):
     blurred = cv2.bilateralFilter(gray, 11, 17, 17)
     blurred = cv2.medianBlur(blurred, 9)
     blurred = cv2.GaussianBlur(blurred, (5, 5), 0)
+    # cv2.imshow("Blurred", blurred)
+    # cv2.waitKey(0)
 
     # Perform adaptive thresholding
     # Find the most common pixel value in the image to use as the background level
 
     thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 7, 2)
-    cv2.imshow("Thresholded", thresh)
-    cv2.waitKey(0)
+    # cv2.imshow("Thresholded", thresh)
+    # cv2.waitKey(0)
 
     # Invert the thresholded image
     thresh = cv2.bitwise_not(thresh)
-    cv2.imshow("Thresholded", thresh)
-    cv2.waitKey(0)
+    # cv2.imshow("Thresholded", thresh)
+    # cv2.waitKey(0)
 
     # Apply morphological operations to connect components
     kernel = np.ones((15, 15), np.uint8)
     connected = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
-
+    # cv2.imshow("Connected", connected)
+    # cv2.waitKey(0)
     # Find connected components
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(connected, connectivity=4)
 
     # Filter out small components (optional)
-    min_size = 40000  # minimum size of connected component to consider
+    min_size = 4000  # minimum size of connected component to consider
+    max_size = 30000  # maximum size of connected component to consider
     filtered_labels = np.zeros_like(labels, dtype=np.uint8)
     for i in range(1, num_labels):
-        if stats[i, cv2.CC_STAT_AREA] >= min_size:
+        if stats[i, cv2.CC_STAT_AREA] >= min_size and stats[i, cv2.CC_STAT_AREA] <= max_size:
             filtered_labels[labels == i] = 255
 
-    cv2.imshow("Filtered Labels", filtered_labels)
-    cv2.waitKey(0)
+    # cv2.imshow("Filtered Labels", filtered_labels)
+    # cv2.waitKey(0)
 
     # Find contours in the edge-detected image
     contours, _ = cv2.findContours(filtered_labels, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)

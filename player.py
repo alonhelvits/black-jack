@@ -45,7 +45,7 @@ class Participant:
         """Calculate the value of the hand, adjusting for aces as necessary."""
         self.coins_value = 0
         coin_values = {
-            "Red": 1, "Green": 10, "Blue": 100, "White": 1000, 'Light': 10, 'Dark': 100}
+            "Red": 5, "Green": 25, "Blue": 50}
         for coin in self.coins:
             if coin in coin_values:
                 self.coins_value += coin_values[coin]
