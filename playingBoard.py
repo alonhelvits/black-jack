@@ -4,6 +4,7 @@ import numpy as np
 import imutils
 from copy import deepcopy
 import time
+import matplotlib.pyplot as plt
 
 BKG_THRESH = 60
 
@@ -47,6 +48,15 @@ class PlayingBoard:
 
 def board_detection(frame):
     """This function will detect the playing board from the camera"""
+    # Assuming frame is your BGR image
+    # Convert BGR to RGB
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    # Plot the RGB image
+    # plt.figure(figsize=(10, 10))
+    # plt.imshow(frame_rgb)
+    # plt.show()
+
     # Convert the frame to grayscale
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -68,6 +78,10 @@ def board_detection(frame):
     thresh = cv2.bitwise_not(thresh)
     # cv2.imshow("Thresholded", thresh)
     # cv2.waitKey(0)
+
+    # plt.figure(figsize=(10, 10))
+    # plt.imshow(thresh, cmap='gray')
+    # plt.show()
 
     # Apply morphological operations to connect components
     kernel = np.ones((15, 15), np.uint8)
@@ -116,6 +130,9 @@ def board_detection(frame):
     if board_contour is not None:
         cv2.drawContours(marked_frame, [most_significant_contour], -1, (0, 255, 0), 2)
         cv2.imshow("Searching Board...", marked_frame)
+        # plt.figure(figsize=(10, 10))
+        # plt.imshow(cv2.cvtColor(marked_frame, cv2.COLOR_BGR2RGB))
+        # plt.show()
         contour_points = board_contour.reshape(4, 2)
     else:
         cv2.imshow("Searching Board...", marked_frame)

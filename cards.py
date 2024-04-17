@@ -1,4 +1,4 @@
-
+import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 
@@ -60,11 +60,18 @@ def find_cards(image):
     blurred = cv2.GaussianBlur(blurred, (5,5), 0)
     #blurred = cv2.bilateralFilter(gray, 11, 13, 13)
 
+    cv2.imshow('blurred', blurred)
+    cv2.waitKey(1)
+
     # Perform adaptive thresholding
     bkg_level = np.bincount(image.ravel()).argmax()
     thresh_level = bkg_level + BKG_THRESH
 
     retval, thresh = cv2.threshold(blurred, thresh_level, 255, cv2.THRESH_BINARY)
+
+    # plt.figure(figsize=(10, 10))
+    # plt.imshow(thresh, cmap='gray')
+    # plt.show()
 
     # Find contours
     #contours, hier = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -99,20 +106,26 @@ def find_cards(image):
                 card_width, card_height = w, h
 
                 warped = flattener(image, np.float32(approx), card_width, card_height)
-                cv2.imshow('warped', warped)
-                cv2.waitKey(1)
+
+                # cv2.imshow('warped', warped)
+                # cv2.waitKey(1)
                 covered_diff_1 = int(np.sum(cv2.absdiff(covered_template_1, warped) / 255))
                 covered_diff_2 = int(np.sum(cv2.absdiff(covered_template_2, warped) / 255))
                 covered_diff_3 = int(np.sum(cv2.absdiff(covered_template_3, warped) / 255))
-                if covered_diff_1 < 25000 or covered_diff_2 < 35000 or covered_diff_3 < 33000: # check if the card is covered, adjust number for sensitivity
+                if covered_diff_1 < 27000 or covered_diff_2 < 35000 or covered_diff_3 < 33000: # check if the card is covered, adjust number for sensitivity
                     rank_img= "Covered"
                     rank_img_trans = "Covered"
                     suit_img = "Covered"
                     cards.append(Card(np.float32(approx), center, warped, contour, card_width, card_height, rank_img, rank_img_trans,suit_img, warped))
                 else:
                     Qcorner_zoom_rank, Qcorner_zoom_suit = get_corner(warped)
+
                     rank_img = get_rank_suit(Qcorner_zoom_rank, flag="rank")
                     suit_img = get_rank_suit(Qcorner_zoom_suit, flag="suit")
+
+                    # plt.figure(figsize=(10, 10))
+                    # plt.imshow(rank_img, cmap='gray')
+                    # plt.show()
 
                     rank_img_trans = rank_img
                     cards.append(Card(np.float32(approx), center, warped, contour,card_width, card_height,rank_img, rank_img_trans,suit_img, warped))
@@ -120,16 +133,23 @@ def find_cards(image):
 
 def get_corner(warped):
     # Width and height of card corner, where rank and suit are
-    CORNER_WIDTH = 110
-    CORNER_HEIGHT = 124
+    CORNER_WIDTH_RANK = 110
+    CORNER_HEIGHT_RANK = 124
+
+    CORNER_WIDTH_SUIT = 98
+    CORNER_HEIGHT_SUIT = 128
 
     # Grab corner of warped card image and do a 5x zoom
-    Qcorner = warped[8:CORNER_HEIGHT + 8, 0:CORNER_WIDTH]
+    Qcorner = warped[8:CORNER_HEIGHT_RANK + 8, 0:CORNER_WIDTH_RANK]
     Qcorner_zoom = cv2.resize(Qcorner, (0, 0), fx=4, fy=4)
     # cv2.imshow('Qcorner_zoom', Qcorner_zoom)
     # cv2.waitKey(1)
 
-    Qcorner_suit = warped[CORNER_HEIGHT + 4: 2*CORNER_HEIGHT + 4, 2 :CORNER_WIDTH-7]
+    # plt.figure(figsize=(10, 10))
+    # plt.imshow(Qcorner_zoom, cmap='gray')
+    # plt.show()
+
+    Qcorner_suit = warped[CORNER_HEIGHT_SUIT: 2*CORNER_HEIGHT_SUIT - 4, 2 :CORNER_WIDTH_SUIT]
     Qcorner_zoom_suit = cv2.resize(Qcorner_suit, (0, 0), fx=4, fy=4)
     # cv2.imshow('Qcorner_zoom_suit', Qcorner_zoom_suit)
     # cv2.waitKey(1)
@@ -169,6 +189,7 @@ def get_rank_suit(Qcorner_zoom, flag):
     # image to match dimensions of the train rank image
     if len(Qrank_cnts) != 0:
         x1, y1, w1, h1 = cv2.boundingRect(Qrank_cnts[0])
+        x = h1
         Qrank_roi = Qrank_inv[y1:y1 + h1, x1:x1 + w1]
         Qrank_sized = cv2.resize(Qrank_roi, (WIDTH, HEIGHT), 0, 0)
         img = Qrank_sized

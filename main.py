@@ -6,6 +6,7 @@ import playingBoard
 import cards as cards_file
 import coins as coins_file
 import player
+import matplotlib.pyplot as plt
 from skimage.metrics import structural_similarity as ssim
 
 
@@ -188,9 +189,12 @@ def read_video_from_iphone():
                 failed_cap_detection_cnt = 0
                 transformed_board = cv2.warpPerspective(frame, playing_board.perspective_transform_matrix,
                                                         (playing_board.width, playing_board.height))
+                # plt.figure(figsize=(10, 10))
+                # plt.imshow(cv2.cvtColor(transformed_board, cv2.COLOR_BGR2RGB))
+                # plt.show()
                 if prev_frame != []:
                     ssim = compare_frames(transformed_board, prev_frame)
-                    if ssim > 0.94:
+                    if ssim > 0.96:
                         # Draw contours of cards and coins from previous frame
                         cv2.drawContours(transformed_board, prev_cards_contours, -1, (0, 0, 255), 3)
                         for coin in prev_coins:
@@ -216,6 +220,11 @@ def read_video_from_iphone():
 
                     # apply card detection
                     cards, dealer_cards, players_cards, marked_cards_board = cards_file.detect_cards(transformed_board)
+
+                # plt.figure(figsize=(10, 10))
+                # plt.imshow(cv2.cvtColor(marked_cards_board, cv2.COLOR_BGR2RGB))
+                # plt.show()
+
                 # apply the game logic
                 all_cards = dealer_cards + players_cards[0] + players_cards[1]
                 # no situation of fewer cards than previous should happen in the middle of the game, card is not detected
@@ -239,6 +248,10 @@ def read_video_from_iphone():
                 new_width, new_height = 4800, 3200
                 resized_image = cv2.resize(game_image, (new_width, new_height))
                 cv2.imshow("Detected Cards", resized_image)
+
+                # plt.figure(figsize=(10, 10))
+                # plt.imshow(cv2.cvtColor(resized_image, cv2.COLOR_BGR2RGB))
+                # plt.show()
 
                 prev_cards_contours = [card.contour for card in cards]
                 prev_coins = coins
@@ -271,6 +284,7 @@ def read_video_from_iphone():
     # Release the webcam and close all OpenCV windows
     cap.release()
     cv2.destroyAllWindows()
+
 
 def playBlackJack():
     """
