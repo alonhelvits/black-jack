@@ -25,7 +25,9 @@ suit_template = {
     'Spades': cv2.imread('Card_Imgs/Spades.jpg', cv2.IMREAD_GRAYSCALE)
 }
 
-covered_template = cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
+covered_template_1 = cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
+covered_template_2 = cv2.imread('Card_Imgs/Covered_1.jpg', cv2.IMREAD_GRAYSCALE)
+covered_template_3 = cv2.imread('Card_Imgs/Covered_2.jpg', cv2.IMREAD_GRAYSCALE)
 
 
 
@@ -71,7 +73,7 @@ def find_cards(image):
     if len(contours) == 0:
         return [], []
 
-    contours = sorted(contours, key=cv2.contourArea, reverse=True)
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
     cards = []
 
     # Loop over the contours
@@ -79,10 +81,10 @@ def find_cards(image):
         area = cv2.contourArea(contour)
 
         # Filter contours based on area
-        if 34000 < area < 50000 :
+        if 31000 < area < 50000 :
             # Approximate the contour to obtain the corners
             peri = cv2.arcLength(contour, True)
-            approx = cv2.approxPolyDP(contour, 0.01 * peri, True)
+            approx = cv2.approxPolyDP(contour, 0.03 * peri, True)
 
             # Check if the contour has four corners
             if len(approx) == 4:
@@ -97,19 +99,21 @@ def find_cards(image):
                 card_width, card_height = w, h
 
                 warped = flattener(image, np.float32(approx), card_width, card_height)
-
-                covered_diff = int(np.sum(cv2.absdiff(covered_template, warped) / 255))
-
-                if covered_diff < 25000: # check if the card is covered, adjust number for sensitivity
+                cv2.imshow('warped', warped)
+                cv2.waitKey(1)
+                covered_diff_1 = int(np.sum(cv2.absdiff(covered_template_1, warped) / 255))
+                covered_diff_2 = int(np.sum(cv2.absdiff(covered_template_2, warped) / 255))
+                covered_diff_3 = int(np.sum(cv2.absdiff(covered_template_3, warped) / 255))
+                if covered_diff_1 < 25000 or covered_diff_2 < 35000 or covered_diff_3 < 33000: # check if the card is covered, adjust number for sensitivity
                     rank_img= "Covered"
                     rank_img_trans = "Covered"
-                    cards.append(Card(np.float32(approx), center, warped, contour, card_width, card_height, rank_img, rank_img_trans, warped))
+                    suit_img = "Covered"
+                    cards.append(Card(np.float32(approx), center, warped, contour, card_width, card_height, rank_img, rank_img_trans,suit_img, warped))
                 else:
                     Qcorner_zoom_rank, Qcorner_zoom_suit = get_corner(warped)
-                    rank_img = get_rank_suit(Qcorner_zoom_rank)
-                    suit_img = get_rank_suit(Qcorner_zoom_suit)
+                    rank_img = get_rank_suit(Qcorner_zoom_rank, flag="rank")
+                    suit_img = get_rank_suit(Qcorner_zoom_suit, flag="suit")
 
-                    #rank_img_trans = get_runk(np.rot90(warped,2))
                     rank_img_trans = rank_img
                     cards.append(Card(np.float32(approx), center, warped, contour,card_width, card_height,rank_img, rank_img_trans,suit_img, warped))
     return cards
@@ -122,27 +126,41 @@ def get_corner(warped):
     # Grab corner of warped card image and do a 5x zoom
     Qcorner = warped[8:CORNER_HEIGHT + 8, 0:CORNER_WIDTH]
     Qcorner_zoom = cv2.resize(Qcorner, (0, 0), fx=4, fy=4)
-    cv2.imshow('Qcorner_zoom', Qcorner_zoom)
-    cv2.waitKey(1)
+    # cv2.imshow('Qcorner_zoom', Qcorner_zoom)
+    # cv2.waitKey(1)
 
-    Qcorner_suit = warped[CORNER_HEIGHT + 4, 2*Qcorner + 4, 2 :CORNER_WIDTH]
+    Qcorner_suit = warped[CORNER_HEIGHT + 4: 2*CORNER_HEIGHT + 4, 2 :CORNER_WIDTH-7]
     Qcorner_zoom_suit = cv2.resize(Qcorner_suit, (0, 0), fx=4, fy=4)
-    cv2.imshow('Qcorner_zoom_suit', Qcorner_zoom_suit)
-    cv2.waitKey(1)
+    # cv2.imshow('Qcorner_zoom_suit', Qcorner_zoom_suit)
+    # cv2.waitKey(1)
     return Qcorner_zoom, Qcorner_zoom_suit
 
-def get_rank_suit(Qcorner_zoom):
+def get_rank_suit(Qcorner_zoom, flag):
     # Dimensions of rank/suit train images
     WIDTH = 72
     HEIGHT = 127
 
     # Sample known white pixel intensity to determine good threshold level
     black_level, white_level, _, _ = cv2.minMaxLoc(Qcorner_zoom)
-    thresh_level = (white_level + black_level) // 2 + black_level // 16 + 12
+    thresh_level = (white_level + black_level) // 2 + black_level // 15 + 15
     if (thresh_level <= 0):
         thresh_level = 1
     retval, Qrank_inv = cv2.threshold(Qcorner_zoom, thresh_level, 255, cv2.THRESH_BINARY_INV)
 
+    if flag == "suit":
+        kernel = np.ones((31, 19), np.uint8)
+        connected = cv2.morphologyEx(Qrank_inv, cv2.MORPH_CLOSE, kernel)
+        # cv2.imshow("Connected", connected)
+        # cv2.waitKey(0)
+        # Find connected components
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(connected, connectivity=4)
+
+        filtered_labels = np.zeros_like(labels, dtype=np.uint8)
+        for i in range(1, num_labels):
+            filtered_labels[labels == i] = 255
+        Qrank_inv = filtered_labels
+        # cv2.imshow('suit', Qrank_inv)
+        # cv2.waitKey(1)
     # Find rank contour and bounding rectangle, isolate and find largest contour
     Qrank_cnts, hier = cv2.findContours(Qrank_inv, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     Qrank_cnts = sorted(Qrank_cnts, key=cv2.contourArea, reverse=True)
@@ -156,8 +174,8 @@ def get_rank_suit(Qcorner_zoom):
         img = Qrank_sized
     else:
         img = ""
-    cv2.imshow('rank_img', img)
-    cv2.waitKey(1)
+    # cv2.imshow('rank_img', img)
+    # cv2.waitKey(1)
     return img
 
 def classify_card_number(card_rank_image, rank_templates, warped):
@@ -329,7 +347,11 @@ def detect_cards(input_image):
         else:
             card.rank = best_match_name_trans
 
-        card.suit = classify_suit_number(card.suit_img, suit_template)
+        if card.suit_img == "Covered":
+            card.suit = "Covered"
+        else:
+            card.suit = classify_suit_number(card.suit_img, suit_template)
+
         # Draw contours on the original image
         cv2.drawContours(marked_frame, [card.contour], -1, (255, 0, 0), 3)
         if card.rank == "Covered":
@@ -341,11 +363,19 @@ def detect_cards(input_image):
                         1.2, (255, 255, 255), 2)
         else:
             # Outline
-            cv2.putText(marked_frame, f"{card.rank} \n of \n {card.suit}", (card.center[0] - 50, card.center[1]),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 0), 16)
+            cv2.putText(marked_frame, card.rank, (card.center[0] - 50, card.center[1]), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                        (0, 0, 0), 16)
+            cv2.putText(marked_frame, "of", (card.center[0] - 50, card.center[1] + 30), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                        (0, 0, 0), 16)
+            cv2.putText(marked_frame, card.suit, (card.center[0] - 50, card.center[1] + 60), cv2.FONT_HERSHEY_SIMPLEX,
+                        1, (0, 0, 0), 16)
             # Main text
-            cv2.putText(marked_frame, f"{card.rank} \n of \n {card.suit}", (card.center[0] - 50, card.center[1]),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
+            cv2.putText(marked_frame, card.rank, (card.center[0] - 50, card.center[1]), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                        (255, 255, 255), 2)
+            cv2.putText(marked_frame, "of", (card.center[0] - 50, card.center[1] + 30), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                        (255, 255, 255), 2)
+            cv2.putText(marked_frame, card.suit, (card.center[0] - 50, card.center[1] + 60), cv2.FONT_HERSHEY_SIMPLEX,
+                        1, (255, 255, 255), 2)
 
     dealer_cards, player_cards = group_cards(cards, input_image)
     return cards, dealer_cards, player_cards, marked_frame
