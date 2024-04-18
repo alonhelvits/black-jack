@@ -13,6 +13,7 @@ class Coin:
         self.group = group
 
 
+
 def group_coins(coins, image):
     dealer_coins = []
     player1_coins = []
@@ -46,44 +47,50 @@ def detect_coins(image):
 
     # Convert the image to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # Define the region of interest (ROI) as the lower part of the image
+    roi = gray[800:, :]
 
     # Detect circles using Hough Circle Transform with adjusted parameters
-    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, dp=1, minDist=50,
+    circles = cv2.HoughCircles(roi, cv2.HOUGH_GRADIENT, dp=1, minDist=50,
                                param1=50, param2=40, minRadius=45, maxRadius=60)
+
+    # Detect circles using Hough Circle Transform with adjusted parameters
+    # circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, dp=1, minDist=50,
+    #                            param1=50, param2=40, minRadius=45, maxRadius=60)
 
     if circles is not None:
         circles = np.round(circles[0, :]).astype("int")
         for (x, y, r) in circles:
+            y += 800
             # Draw the circle and its center
-            if y > 800:
-                # Create a mask for the circular ROI
-                mask = np.zeros_like(image)
-                cv2.circle(mask, (x, y), r, (255, 255, 255), thickness=-1)  # Create a filled circle in the mask
+            # Create a mask for the circular ROI
+            mask = np.zeros_like(image)
+            cv2.circle(mask, (x, y), r, (255, 255, 255), thickness=-1)  # Create a filled circle in the mask
 
-                # Apply the mask to the original image
-                masked_image = cv2.bitwise_and(image, mask)
+            # Apply the mask to the original image
+            masked_image = cv2.bitwise_and(image, mask)
 
-                # Extract ROI for the circle using the masked image
-                roi = masked_image[y - r:y + r, x - r:x + r]
+            # Extract ROI for the circle using the masked image
+            roi = masked_image[y - r:y + r, x - r:x + r]
 
-                # Calculate average intensity of each channel
-                avg_color = np.mean(roi, axis=(0, 1))  # Calculate mean along axis 0 and 1 (height and width)
-                avg_color[0] -= 13
-                # Determine the color based on the average intensity of each channel
-                if avg_color[0] > avg_color[1] and avg_color[0] > avg_color[2]:
-                    color = "Blue"
-                    cv2.circle(image, (x, y), r, (255, 0, 0), 4)
-                    cv2.circle(image, (x, y), 2, (255, 0, 0), 3)
-                elif avg_color[1] > avg_color[0] and avg_color[1] > avg_color[2]:
-                    color = "Green"
-                    cv2.circle(image, (x, y), r, (0, 255, 0), 4)
-                    cv2.circle(image, (x, y), 2, (0, 255, 0), 3)
-                else:
-                    color = "Red"
-                    cv2.circle(image, (x, y), r, (0, 0, 255), 4)
-                    cv2.circle(image, (x, y), 2, (0, 0, 255), 3)
+            # Calculate average intensity of each channel
+            avg_color = np.mean(roi, axis=(0, 1))  # Calculate mean along axis 0 and 1 (height and width)
+            avg_color[0] -= 13
+            # Determine the color based on the average intensity of each channel
+            if avg_color[0] > avg_color[1] and avg_color[0] > avg_color[2]:
+                color = "Blue"
+                cv2.circle(image, (x, y), r, (255, 0, 0), 4)
+                cv2.circle(image, (x, y), 2, (255, 0, 0), 3)
+            elif avg_color[1] > avg_color[0] and avg_color[1] > avg_color[2]:
+                color = "Green"
+                cv2.circle(image, (x, y), r, (0, 255, 0), 4)
+                cv2.circle(image, (x, y), 2, (0, 255, 0), 3)
+            else:
+                color = "Red"
+                cv2.circle(image, (x, y), r, (0, 0, 255), 4)
+                cv2.circle(image, (x, y), 2, (0, 0, 255), 3)
 
-                coins.append(Coin(r, (x, y), color))
+            coins.append(Coin(r, (x, y), color))
 
     dealer_coins, players_coins = group_coins(coins, image)
 

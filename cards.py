@@ -48,20 +48,91 @@ class Card:
         self.rank = None
         self.suit = None
 
+#def find_cards(image):
+    #
+    # BKG_THRESH = 25
+    #
+    # # Convert the image to grayscale
+    # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    #
+    # # Apply Gaussian blur
+    # blurred = cv2.medianBlur(gray, 9)
+    # blurred = cv2.GaussianBlur(blurred, (5,5), 0)
+    # #blurred = cv2.bilateralFilter(gray, 11, 13, 13)
+    #
+    # cv2.imshow('blurred', blurred)
+    # cv2.waitKey(1)
+    #
+    # # Perform adaptive thresholding
+    # bkg_level = np.bincount(image.ravel()).argmax()
+    # thresh_level = bkg_level + BKG_THRESH
+    #
+    # retval, thresh = cv2.threshold(blurred, thresh_level, 255, cv2.THRESH_BINARY)
+    #
+    # # plt.figure(figsize=(10, 10))
+    # # plt.imshow(thresh, cmap='gray')
+    # # plt.show()
+    #
+    # # Find contours
+    # #contours, hier = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    # index_sort = sorted(range(len(contours)), key=lambda i: cv2.contourArea(contours[i]), reverse=True)
+    # if len(contours) == 0:
+    #     return [], []
+    #
+    # contours = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
+    # cards = []
+    #
+    # # Loop over the contours
+    # # Loop over the contours
+    # for contour in contours:
+    #     # Calculate the area of the contour
+    #     area = cv2.contourArea(contour)
+    #
+    #     # Adjust the area threshold based on the compression ratio
+    #     compressed_area_threshold_lower = 31000 * 0.5 * 0.5  # Assuming compression factor is 0.5
+    #     compressed_area_threshold_upper = 50000 * 0.5 * 0.5  # Assuming compression factor is 0.5
+    #
+    #     # Filter contours based on adjusted area threshold
+    #     if compressed_area_threshold_lower < area < compressed_area_threshold_upper:
+    #         # Approximate the contour to obtain the corners
+    #         peri = cv2.arcLength(contour, True)
+    #         approx = cv2.approxPolyDP(contour, 0.03 * peri, True)
+    #
+    #         # Scale back the contour points to correspond to the original image size
+    #         approx = approx * 2  # Assuming the compression factor is 0.5
+    #
+    #         # Check if the contour has four corners
+    #         if len(approx) == 4:
+    #             # Calculate the center of the card
+    #             average = np.sum(np.float32(approx), axis=0) / len(np.float32(approx))
+    #             cent_x = int(average[0][0])
+    #             cent_y = int(average[0][1])
+    #             center = np.array([cent_x, cent_y])
+    #
+    #             # Find width and height of card's bounding rectangle
+    #             x, y, w, h = cv2.boundingRect(contour)
+    #             card_width, card_height = w, h
+    #
+    #             # Warped image processing
+    #             warped = flattener(image, np.float32(approx), card_width, card_height)
 def find_cards(image):
-
+    resize_factor = 0.5
+    resize_factor_op = 2
     BKG_THRESH = 25
 
-    # Convert the image to grayscale
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # Compress the image
+    compressed_image = cv2.resize(image, None, fx=resize_factor, fy=resize_factor)
+
+    # Convert the compressed image to grayscale
+    gray = cv2.cvtColor(compressed_image, cv2.COLOR_BGR2GRAY)
 
     # Apply Gaussian blur
     blurred = cv2.medianBlur(gray, 9)
-    blurred = cv2.GaussianBlur(blurred, (5,5), 0)
-    #blurred = cv2.bilateralFilter(gray, 11, 13, 13)
+    blurred = cv2.GaussianBlur(blurred, (5, 5), 0)
 
-    cv2.imshow('blurred', blurred)
-    cv2.waitKey(1)
+    # cv2.imshow('blurred', blurred)
+    # cv2.waitKey(1)
 
     # Perform adaptive thresholding
     bkg_level = np.bincount(image.ravel()).argmax()
@@ -69,12 +140,7 @@ def find_cards(image):
 
     retval, thresh = cv2.threshold(blurred, thresh_level, 255, cv2.THRESH_BINARY)
 
-    # plt.figure(figsize=(10, 10))
-    # plt.imshow(thresh, cmap='gray')
-    # plt.show()
-
     # Find contours
-    #contours, hier = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     index_sort = sorted(range(len(contours)), key=lambda i: cv2.contourArea(contours[i]), reverse=True)
     if len(contours) == 0:
@@ -82,17 +148,24 @@ def find_cards(image):
 
     contours = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
     cards = []
+    # Adjust the area threshold based on the compression ratio
+    compressed_area_threshold_lower = 31000 * resize_factor * resize_factor  # Assuming compression factor is 0.5
+    compressed_area_threshold_upper = 50000 * resize_factor * resize_factor  # Assuming compression factor is 0.5
 
     # Loop over the contours
     for contour in contours:
+        # Calculate the area of the contour
         area = cv2.contourArea(contour)
 
-        # Filter contours based on area
-        if 31000 < area < 50000 :
+        # Filter contours based on adjusted area threshold
+        if compressed_area_threshold_lower < area < compressed_area_threshold_upper:
             # Approximate the contour to obtain the corners
             peri = cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, 0.03 * peri, True)
 
+            # Scale back the contour points to correspond to the original image size
+            approx = approx * resize_factor_op
+            contour = contour * resize_factor_op
             # Check if the contour has four corners
             if len(approx) == 4:
                 # Calculate the center of the card
@@ -105,6 +178,7 @@ def find_cards(image):
                 x, y, w, h = cv2.boundingRect(contour)
                 card_width, card_height = w, h
 
+                # Warped image processing
                 warped = flattener(image, np.float32(approx), card_width, card_height)
 
                 # cv2.imshow('warped', warped)
@@ -112,7 +186,7 @@ def find_cards(image):
                 covered_diff_1 = int(np.sum(cv2.absdiff(covered_template_1, warped) / 255))
                 covered_diff_2 = int(np.sum(cv2.absdiff(covered_template_2, warped) / 255))
                 covered_diff_3 = int(np.sum(cv2.absdiff(covered_template_3, warped) / 255))
-                if covered_diff_1 < 27000 or covered_diff_2 < 35000 or covered_diff_3 < 33000: # check if the card is covered, adjust number for sensitivity
+                if covered_diff_1 < 27000 or covered_diff_2 < 40000 or covered_diff_3 < 40000: # check if the card is covered, adjust number for sensitivity
                     rank_img= "Covered"
                     rank_img_trans = "Covered"
                     suit_img = "Covered"
