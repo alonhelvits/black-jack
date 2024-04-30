@@ -1,334 +1,272 @@
-############## Playing Card Detector Functions ###############
-#
-# Author: Evan Juras
-# Date: 9/5/17
-# Description: Functions and classes for CardDetector.py that perform
-# various steps of the card detection algorithm
-
-
-# Import necessary packages
-import numpy as np
+import matplotlib.pyplot as plt
 import cv2
-import time
+import numpy as np
 
-### Constants ###
+rank_templates = {
+    'Ace': cv2.imread('Card_Imgs/Ace.jpg', cv2.IMREAD_GRAYSCALE),
+    'Two': cv2.imread('Card_Imgs/Two.jpg', cv2.IMREAD_GRAYSCALE),
+    'Three': cv2.imread('Card_Imgs/Three.jpg', cv2.IMREAD_GRAYSCALE),
+    'Four': cv2.imread('Card_Imgs/Four.jpg', cv2.IMREAD_GRAYSCALE),
+    'Five': cv2.imread('Card_Imgs/Five.jpg', cv2.IMREAD_GRAYSCALE),
+    'Six': cv2.imread('Card_Imgs/Six.jpg', cv2.IMREAD_GRAYSCALE),
+    'Seven': cv2.imread('Card_Imgs/Seven.jpg', cv2.IMREAD_GRAYSCALE),
+    'Eight': cv2.imread('Card_Imgs/Eight.jpg', cv2.IMREAD_GRAYSCALE),
+    'Nine': cv2.imread('Card_Imgs/Nine.jpg', cv2.IMREAD_GRAYSCALE),
+    'Ten': cv2.imread('Card_Imgs/Ten.jpg', cv2.IMREAD_GRAYSCALE),
+    'Jack': cv2.imread('Card_Imgs/Jack.jpg', cv2.IMREAD_GRAYSCALE),
+    'Queen': cv2.imread('Card_Imgs/Queen.jpg', cv2.IMREAD_GRAYSCALE),
+    'King': cv2.imread('Card_Imgs/King.jpg', cv2.IMREAD_GRAYSCALE),
+}
 
-# Adaptive threshold levels
-BKG_THRESH = 60
-CARD_THRESH = 30
+suit_template = {
+    'Diamonds': cv2.imread('Card_Imgs/Diamonds.jpg', cv2.IMREAD_GRAYSCALE),
+    'Hearts': cv2.imread('Card_Imgs/Hearts.jpg', cv2.IMREAD_GRAYSCALE),
+    'Clubs': cv2.imread('Card_Imgs/Clubs.jpg', cv2.IMREAD_GRAYSCALE),
+    'Spades': cv2.imread('Card_Imgs/Spades.jpg', cv2.IMREAD_GRAYSCALE)
+}
 
-# Width and height of card corner, where rank and suit are
-CORNER_WIDTH = 32
-CORNER_HEIGHT = 84
-
-# Dimensions of rank train images
-RANK_WIDTH = 70
-RANK_HEIGHT = 125
-
-# Dimensions of suit train images
-SUIT_WIDTH = 70
-SUIT_HEIGHT = 100
-
-RANK_DIFF_MAX = 2000
-SUIT_DIFF_MAX = 700
-
-CARD_MAX_AREA = 120000
-CARD_MIN_AREA = 25000
-
-font = cv2.FONT_HERSHEY_SIMPLEX
-
-
-### Structures to hold query card and train card information ###
-
-class Query_card:
-    """Structure to store information about query cards in the camera image."""
-
-    def __init__(self):
-        self.contour = []  # Contour of card
-        self.width, self.height = 0, 0  # Width and height of card
-        self.corner_pts = []  # Corner points of card
-        self.center = []  # Center point of card
-        self.warp = []  # 200x300, flattened, grayed, blurred image
-        self.rank_img = []  # Thresholded, sized image of card's rank
-        self.suit_img = []  # Thresholded, sized image of card's suit
-        self.best_rank_match = "Unknown"  # Best matched rank
-        self.best_suit_match = "Unknown"  # Best matched suit
-        self.rank_diff = 0  # Difference between rank image and best matched train rank image
-        self.suit_diff = 0  # Difference between suit image and best matched train suit image
+covered_template_1 = cv2.imread('Card_Imgs/Covered.jpg', cv2.IMREAD_GRAYSCALE)
+covered_template_2 = cv2.imread('Card_Imgs/Covered_1.jpg', cv2.IMREAD_GRAYSCALE)
+covered_template_3 = cv2.imread('Card_Imgs/Covered_2.jpg', cv2.IMREAD_GRAYSCALE)
 
 
-class Train_ranks:
-    """Structure to store information about train rank images."""
-
-    def __init__(self):
-        self.img = []  # Thresholded, sized rank image loaded from hard drive
-        self.name = "Placeholder"
 
 
-class Train_suits:
-    """Structure to store information about train suit images."""
-
-    def __init__(self):
-        self.img = []  # Thresholded, sized suit image loaded from hard drive
-        self.name = "Placeholder"
-
-
-### Functions ###
-def load_ranks(filepath):
-    """Loads rank images from directory specified by filepath. Stores
-    them in a list of Train_ranks objects."""
-
-    train_ranks = []
-    i = 0
-
-    for Rank in ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven',
-                 'Eight', 'Nine', 'Ten', 'Jack', 'Queen', 'King']:
-        train_ranks.append(Train_ranks())
-        train_ranks[i].name = Rank
-        filename = Rank + '.jpg'
-        train_ranks[i].img = cv2.imread(filepath + filename, cv2.IMREAD_GRAYSCALE)
-        i = i + 1
-
-    return train_ranks
+class Card:
+    def __init__(self, corners, center, transpose_image, contour,card_width, card_height,rank_img, rank_img_trans,suit_img, warped):
+        self.corners = corners
+        self.center = center
+        self.transpose_image = transpose_image
+        self.contour = contour
+        self.card_width = card_width
+        self.card_height = card_height
+        self.rank_img = rank_img
+        self.rank_img_trans = rank_img_trans
+        self.suit_img = suit_img
+        self.warped = warped
+        self.group = None
+        self.rank = None
+        self.suit = None
 
 
-def load_suits(filepath):
-    """Loads suit images from directory specified by filepath. Stores
-    them in a list of Train_suits objects."""
+def find_cards(image):
+    resize_factor = 0.5
+    resize_factor_op = 2
+    BKG_THRESH = 25
 
-    train_suits = []
-    i = 0
+    # Compress the image
+    compressed_image = cv2.resize(image, None, fx=resize_factor, fy=resize_factor)
 
-    for Suit in ['Spades', 'Diamonds', 'Clubs', 'Hearts']:
-        train_suits.append(Train_suits())
-        train_suits[i].name = Suit
-        filename = Suit + '.jpg'
-        train_suits[i].img = cv2.imread(filepath + filename, cv2.IMREAD_GRAYSCALE)
-        i = i + 1
+    # Convert the compressed image to grayscale
+    gray = cv2.cvtColor(compressed_image, cv2.COLOR_BGR2GRAY)
 
-    return train_suits
+    # Apply Gaussian blur
+    blurred = cv2.medianBlur(gray, 9)
+    blurred = cv2.GaussianBlur(blurred, (5, 5), 0)
 
-
-def preprocess_image(image):
-    """Returns a grayed, blurred, and adaptively thresholded camera image."""
-
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (5, 5), 0)
-
-    # The best threshold level depends on the ambient lighting conditions.
-    # For bright lighting, a high threshold must be used to isolate the cards
-    # from the background. For dim lighting, a low threshold must be used.
-    # To make the card detector independent of lighting conditions, the
-    # following adaptive threshold method is used.
-    #
-    # A background pixel in the center top of the image is sampled to determine
-    # its intensity. The adaptive threshold is set at 50 (THRESH_ADDER) higher
-    # than that. This allows the threshold to adapt to the lighting conditions.
-    img_w, img_h = np.shape(image)[:2]
-    bkg_level = gray[int(img_h / 100)][int(img_w / 2)]
+    # Perform adaptive thresholding
+    bkg_level = np.bincount(image.ravel()).argmax()
     thresh_level = bkg_level + BKG_THRESH
 
-    retval, thresh = cv2.threshold(blur, thresh_level, 255, cv2.THRESH_BINARY)
+    retval, thresh = cv2.threshold(blurred, thresh_level, 255, cv2.THRESH_BINARY)
 
-    return thresh
-
-
-def find_cards(thresh_image):
-    """Finds all card-sized contours in a thresholded camera image.
-    Returns the number of cards, and a list of card contours sorted
-    from largest to smallest."""
-
-    # Find contours and sort their indices by contour size
-    dummy, cnts, hier = cv2.findContours(thresh_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    index_sort = sorted(range(len(cnts)), key=lambda i: cv2.contourArea(cnts[i]), reverse=True)
-
-    # If there are no contours, do nothing
-    if len(cnts) == 0:
+    # Find contours
+    contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    index_sort = sorted(range(len(contours)), key=lambda i: cv2.contourArea(contours[i]), reverse=True)
+    if len(contours) == 0:
         return [], []
 
-    # Otherwise, initialize empty sorted contour and hierarchy lists
-    cnts_sort = []
-    hier_sort = []
-    cnt_is_card = np.zeros(len(cnts), dtype=int)
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
+    cards = []
+    # Adjust the area threshold based on the compression ratio
+    compressed_area_threshold_lower = 31000 * resize_factor * resize_factor  # Assuming compression factor is 0.5
+    compressed_area_threshold_upper = 50000 * resize_factor * resize_factor  # Assuming compression factor is 0.5
 
-    # Fill empty lists with sorted contour and sorted hierarchy. Now,
-    # the indices of the contour list still correspond with those of
-    # the hierarchy list. The hierarchy array can be used to check if
-    # the contours have parents or not.
-    for i in index_sort:
-        cnts_sort.append(cnts[i])
-        hier_sort.append(hier[0][i])
+    # Loop over the contours
+    for contour in contours:
+        # Calculate the area of the contour
+        area = cv2.contourArea(contour)
 
-    # Determine which of the contours are cards by applying the
-    # following criteria: 1) Smaller area than the maximum card size,
-    # 2), bigger area than the minimum card size, 3) have no parents,
-    # and 4) have four corners
+        # Filter contours based on adjusted area threshold
+        if compressed_area_threshold_lower < area < compressed_area_threshold_upper:
+            # Approximate the contour to obtain the corners
+            peri = cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, 0.03 * peri, True)
 
-    for i in range(len(cnts_sort)):
-        size = cv2.contourArea(cnts_sort[i])
-        peri = cv2.arcLength(cnts_sort[i], True)
-        approx = cv2.approxPolyDP(cnts_sort[i], 0.01 * peri, True)
+            # Scale back the contour points to correspond to the original image size
+            approx = approx * resize_factor_op
+            contour = contour * resize_factor_op
+            # Check if the contour has four corners
+            if len(approx) == 4:
+                # Calculate the center of the card
+                average = np.sum(np.float32(approx), axis=0) / len(np.float32(approx))
+                cent_x = int(average[0][0])
+                cent_y = int(average[0][1])
+                center = np.array([cent_x, cent_y])
 
-        if ((size < CARD_MAX_AREA) and (size > CARD_MIN_AREA)
-                and (hier_sort[i][3] == -1) and (len(approx) == 4)):
-            cnt_is_card[i] = 1
+                # Find width and height of card's bounding rectangle
+                x, y, w, h = cv2.boundingRect(contour)
+                card_width, card_height = w, h
 
-    return cnts_sort, cnt_is_card
+                # Warped image processing
+                warped = flattener(image, np.float32(approx), card_width, card_height)
 
+                # cv2.imshow('warped', warped)
+                # cv2.waitKey(1)
+                covered_diff_1 = int(np.sum(cv2.absdiff(covered_template_1, warped) / 255))
+                covered_diff_2 = int(np.sum(cv2.absdiff(covered_template_2, warped) / 255))
+                covered_diff_3 = int(np.sum(cv2.absdiff(covered_template_3, warped) / 255))
+                if covered_diff_1 < 27000 or covered_diff_2 < 40000 or covered_diff_3 < 40000: # check if the card is covered, adjust number for sensitivity
+                    rank_img= "Covered"
+                    rank_img_trans = "Covered"
+                    suit_img = "Covered"
+                    cards.append(Card(np.float32(approx), center, warped, contour, card_width, card_height, rank_img, rank_img_trans,suit_img, warped))
+                else:
+                    Qcorner_zoom_rank, Qcorner_zoom_suit = get_corner(warped)
 
-def preprocess_card(contour, image):
-    """Uses contour to find information about the query card. Isolates rank
-    and suit images from the card."""
+                    rank_img = get_rank_suit(Qcorner_zoom_rank, flag="rank")
+                    suit_img = get_rank_suit(Qcorner_zoom_suit, flag="suit")
 
-    # Initialize new Query_card object
-    qCard = Query_card()
+                    rank_img_trans = rank_img
+                    cards.append(Card(np.float32(approx), center, warped, contour,card_width, card_height,rank_img, rank_img_trans,suit_img, warped))
+    return cards
 
-    qCard.contour = contour
+def get_corner(warped):
+    # Width and height of card corner, where rank and suit are
+    CORNER_WIDTH_RANK = 110
+    CORNER_HEIGHT_RANK = 124
 
-    # Find perimeter of card and use it to approximate corner points
-    peri = cv2.arcLength(contour, True)
-    approx = cv2.approxPolyDP(contour, 0.01 * peri, True)
-    pts = np.float32(approx)
-    qCard.corner_pts = pts
+    CORNER_WIDTH_SUIT = 98
+    CORNER_HEIGHT_SUIT = 128
 
-    # Find width and height of card's bounding rectangle
-    x, y, w, h = cv2.boundingRect(contour)
-    qCard.width, qCard.height = w, h
-
-    # Find center point of card by taking x and y average of the four corners.
-    average = np.sum(pts, axis=0) / len(pts)
-    cent_x = int(average[0][0])
-    cent_y = int(average[0][1])
-    qCard.center = [cent_x, cent_y]
-
-    # Warp card into 200x300 flattened image using perspective transform
-    qCard.warp = flattener(image, pts, w, h)
-
-    # Grab corner of warped card image and do a 4x zoom
-    Qcorner = qCard.warp[0:CORNER_HEIGHT, 0:CORNER_WIDTH]
+    # Grab corner of warped card image and do a 5x zoom
+    Qcorner = warped[8:CORNER_HEIGHT_RANK + 8, 0:CORNER_WIDTH_RANK]
     Qcorner_zoom = cv2.resize(Qcorner, (0, 0), fx=4, fy=4)
 
+    Qcorner_suit = warped[CORNER_HEIGHT_SUIT: 2*CORNER_HEIGHT_SUIT - 4, 2 :CORNER_WIDTH_SUIT]
+    Qcorner_zoom_suit = cv2.resize(Qcorner_suit, (0, 0), fx=4, fy=4)
+
+    return Qcorner_zoom, Qcorner_zoom_suit
+
+def get_rank_suit(Qcorner_zoom, flag):
+    # Dimensions of rank/suit train images
+    WIDTH = 72
+    HEIGHT = 127
+
     # Sample known white pixel intensity to determine good threshold level
-    white_level = Qcorner_zoom[15, int((CORNER_WIDTH * 4) / 2)]
-    thresh_level = white_level - CARD_THRESH
+    black_level, white_level, _, _ = cv2.minMaxLoc(Qcorner_zoom)
+    thresh_level = (white_level + black_level) // 2 + black_level // 15 + 15
     if (thresh_level <= 0):
         thresh_level = 1
-    retval, query_thresh = cv2.threshold(Qcorner_zoom, thresh_level, 255, cv2.THRESH_BINARY_INV)
+    retval, Qrank_inv = cv2.threshold(Qcorner_zoom, thresh_level, 255, cv2.THRESH_BINARY_INV)
 
-    # Split in to top and bottom half (top shows rank, bottom shows suit)
-    Qrank = query_thresh[20:185, 0:128]
-    Qsuit = query_thresh[186:336, 0:128]
+    if flag == "suit":
+        kernel = np.ones((31, 19), np.uint8)
+        connected = cv2.morphologyEx(Qrank_inv, cv2.MORPH_CLOSE, kernel)
+        # cv2.imshow("Connected", connected)
+        # cv2.waitKey(0)
+        # Find connected components
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(connected, connectivity=4)
 
+        filtered_labels = np.zeros_like(labels, dtype=np.uint8)
+        for i in range(1, num_labels):
+            filtered_labels[labels == i] = 255
+        Qrank_inv = filtered_labels
+        # cv2.imshow('suit', Qrank_inv)
+        # cv2.waitKey(1)
     # Find rank contour and bounding rectangle, isolate and find largest contour
-    dummy, Qrank_cnts, hier = cv2.findContours(Qrank, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    Qrank_cnts, hier = cv2.findContours(Qrank_inv, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     Qrank_cnts = sorted(Qrank_cnts, key=cv2.contourArea, reverse=True)
 
     # Find bounding rectangle for largest contour, use it to resize query rank
     # image to match dimensions of the train rank image
     if len(Qrank_cnts) != 0:
         x1, y1, w1, h1 = cv2.boundingRect(Qrank_cnts[0])
-        Qrank_roi = Qrank[y1:y1 + h1, x1:x1 + w1]
-        Qrank_sized = cv2.resize(Qrank_roi, (RANK_WIDTH, RANK_HEIGHT), 0, 0)
-        qCard.rank_img = Qrank_sized
+        x = h1
+        Qrank_roi = Qrank_inv[y1:y1 + h1, x1:x1 + w1]
+        Qrank_sized = cv2.resize(Qrank_roi, (WIDTH, HEIGHT), 0, 0)
+        img = Qrank_sized
+    else:
+        img = ""
+    return img
 
-    # Find suit contour and bounding rectangle, isolate and find largest contour
-    dummy, Qsuit_cnts, hier = cv2.findContours(Qsuit, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    Qsuit_cnts = sorted(Qsuit_cnts, key=cv2.contourArea, reverse=True)
+def classify_card_number(card_rank_image, rank_templates, warped):
+    best_match_name = "Unknown"
+    best_match_diff = 4000  # Initialize with a large value
 
-    # Find bounding rectangle for largest contour, use it to resize query suit
-    # image to match dimensions of the train suit image
-    if len(Qsuit_cnts) != 0:
-        x2, y2, w2, h2 = cv2.boundingRect(Qsuit_cnts[0])
-        Qsuit_roi = Qsuit[y2:y2 + h2, x2:x2 + w2]
-        Qsuit_sized = cv2.resize(Qsuit_roi, (SUIT_WIDTH, SUIT_HEIGHT), 0, 0)
-        qCard.suit_img = Qsuit_sized
+    if type(card_rank_image) == str:
+        best_match_name = "Covered"
+    else:
+        # Iterate over rank templates
+        for rank, rank_template in rank_templates.items():
+            # Resize the rank template to match the size of the card corner template
+            resized_rank_template = cv2.resize(rank_template,
+                                               (card_rank_image.shape[1], card_rank_image.shape[0]))
 
-    return qCard
+            # Calculate the absolute difference between card corner template and resized rank template
+            diff_img = cv2.absdiff(card_rank_image, resized_rank_template)
 
-
-def match_card(qCard, train_ranks, train_suits):
-    """Finds best rank and suit matches for the query card. Differences
-    the query card rank and suit images with the train rank and suit images.
-    The best match is the rank or suit image that has the least difference."""
-
-    best_rank_match_diff = 10000
-    best_suit_match_diff = 10000
-    best_rank_match_name = "Unknown"
-    best_suit_match_name = "Unknown"
-    i = 0
-
-    # If no contours were found in query card in preprocess_card function,
-    # the img size is zero, so skip the differencing process
-    # (card will be left as Unknown)
-    if (len(qCard.rank_img) != 0) and (len(qCard.suit_img) != 0):
-
-        # Difference the query card rank image from each of the train rank images,
-        # and store the result with the least difference
-        for Trank in train_ranks:
-
-            diff_img = cv2.absdiff(qCard.rank_img, Trank.img)
+            # Calculate the sum of absolute differences
             rank_diff = int(np.sum(diff_img) / 255)
 
-            if rank_diff < best_rank_match_diff:
-                best_rank_diff_img = diff_img
-                best_rank_match_diff = rank_diff
-                best_rank_name = Trank.name
+            # Update best match if a better match is found
+            if rank_diff < best_match_diff:
+                best_match_diff = rank_diff
+                best_match_name = rank
 
-        # Same process with suit images
-        for Tsuit in train_suits:
+    return best_match_name, best_match_diff
 
-            diff_img = cv2.absdiff(qCard.suit_img, Tsuit.img)
-            suit_diff = int(np.sum(diff_img) / 255)
+def classify_suit_number(card_suit_image, suit_templates):
+    best_match_suit = "Unknown"
+    best_match_diff = 400000  # Initialize with a large value
 
-            if suit_diff < best_suit_match_diff:
-                best_suit_diff_img = diff_img
-                best_suit_match_diff = suit_diff
-                best_suit_name = Tsuit.name
+    # Iterate over rank templates
+    for suit, suit_template in suit_templates.items():
+        # Resize the suit template to match the size of the card corner template
+        resized_suit_template = cv2.resize(suit_template,(card_suit_image.shape[1], card_suit_image.shape[0]))
 
-    # Combine best rank match and best suit match to get query card's identity.
-    # If the best matches have too high of a difference value, card identity
-    # is still Unknown
-    if (best_rank_match_diff < RANK_DIFF_MAX):
-        best_rank_match_name = best_rank_name
+        # Calculate the absolute difference between card corner template and resized suit template
+        diff_img = cv2.absdiff(card_suit_image, resized_suit_template)
 
-    if (best_suit_match_diff < SUIT_DIFF_MAX):
-        best_suit_match_name = best_suit_name
+        # Calculate the sum of absolute differences
+        suit_diff = int(np.sum(diff_img) / 255)
 
-    # Return the identiy of the card and the quality of the suit and rank match
-    return best_rank_match_name, best_suit_match_name, best_rank_match_diff, best_suit_match_diff
+        # Update best match if a better match is found
+        if suit_diff < best_match_diff:
+            best_match_diff = suit_diff
+            best_match_suit = suit
+    return best_match_suit
+# Function for grouping cards based on spatial proximity
+def group_cards(cards, image):
+    dealer_cards = []
+    player1_cards = []
+    player2_cards = []
+    board_height, board_width = image.shape[:2]
 
+    upper_third_height = board_height / 2.2
 
-def draw_results(image, qCard):
-    """Draw the card name, center point, and contour on the camera image."""
+    for card in cards:
+        if not isinstance(card, Card):
+            continue
+        card_center_y = card.center[1]
+        card_center_x = card.center[0]
 
-    x = qCard.center[0]
-    y = qCard.center[1]
-    cv2.circle(image, (x, y), 5, (255, 0, 0), -1)
+        # Check if the card is in the upper third of the image
+        if card_center_y < upper_third_height:
+            dealer_cards.append(card.rank)
+        else:
+            # Check if the card is on the left or right side of the image
+            if card_center_x < board_width / 2:
+                player1_cards.append(card.rank)
+            else:
+                player2_cards.append(card.rank)
 
-    rank_name = qCard.best_rank_match
-    suit_name = qCard.best_suit_match
-
-    # Draw card name twice, so letters have black outline
-    cv2.putText(image, (rank_name + ' of'), (x - 60, y - 10), font, 1, (0, 0, 0), 3, cv2.LINE_AA)
-    cv2.putText(image, (rank_name + ' of'), (x - 60, y - 10), font, 1, (50, 200, 200), 2, cv2.LINE_AA)
-
-    cv2.putText(image, suit_name, (x - 60, y + 25), font, 1, (0, 0, 0), 3, cv2.LINE_AA)
-    cv2.putText(image, suit_name, (x - 60, y + 25), font, 1, (50, 200, 200), 2, cv2.LINE_AA)
-
-    # Can draw difference value for troubleshooting purposes
-    # (commented out during normal operation)
-    # r_diff = str(qCard.rank_diff)
-    # s_diff = str(qCard.suit_diff)
-    # cv2.putText(image,r_diff,(x+20,y+30),font,0.5,(0,0,255),1,cv2.LINE_AA)
-    # cv2.putText(image,s_diff,(x+20,y+50),font,0.5,(0,0,255),1,cv2.LINE_AA)
-
-    return image
-
+    return dealer_cards, [player1_cards, player2_cards]
 
 def flattener(image, pts, w, h):
     """Flattens an image of a card into a top-down 200x300 perspective.
-    Returns the flattened, re-sized, grayed image.
-    See www.pyimagesearch.com/2014/08/25/4-point-opencv-getperspective-transform-example/"""
+    Returns the flattened, re-sized, grayed image."""
+
     temp_rect = np.zeros((4, 2), dtype="float32")
 
     s = np.sum(pts, axis=2)
@@ -344,13 +282,13 @@ def flattener(image, pts, w, h):
     # [top left, top right, bottom right, bottom left]
     # before doing the perspective transform
 
-    if w <= 0.8 * h:  # If card is vertically oriented
+    if w <= 0.9 * h:  # If card is vertically oriented
         temp_rect[0] = tl
         temp_rect[1] = tr
         temp_rect[2] = br
         temp_rect[3] = bl
 
-    if w >= 1.2 * h:  # If card is horizontally oriented
+    if w >= 1.1 * h:  # If card is horizontally oriented
         temp_rect[0] = bl
         temp_rect[1] = tl
         temp_rect[2] = tr
@@ -360,7 +298,7 @@ def flattener(image, pts, w, h):
     # has to be used to identify which point is top left, top right
     # bottom left, and bottom right.
 
-    if w > 0.8 * h and w < 1.2 * h:  # If card is diamond oriented
+    if w > 0.9 * h and w < 1.1 * h:  # If card is diamond oriented
         # If furthest left point is higher than furthest right point,
         # card is tilted to the left.
         if pts[1][0][1] <= pts[3][0][1]:
@@ -381,8 +319,8 @@ def flattener(image, pts, w, h):
             temp_rect[2] = pts[2][0]  # Bottom right
             temp_rect[3] = pts[1][0]  # Bottom left
 
-    maxWidth = 200
-    maxHeight = 300
+    maxWidth = 400
+    maxHeight = 600
 
     # Create destination array, calculate perspective transform matrix,
     # and warp card image
@@ -392,3 +330,53 @@ def flattener(image, pts, w, h):
     warp = cv2.cvtColor(warp, cv2.COLOR_BGR2GRAY)
 
     return warp
+def detect_cards(input_image):
+
+    # Find cards in the input image
+    cards = find_cards(input_image)
+    marked_frame = input_image.copy()
+
+    # Iterate over each detected card
+    for card in cards:
+        # Classify the card number using the corner template
+        if not isinstance(card, Card):
+            continue
+        best_match_name, best_match_diff = classify_card_number(card.rank_img,rank_templates, card.warped)
+        best_match_name_trans, best_match_diff_trans = classify_card_number(card.rank_img_trans,rank_templates, card.warped)
+        if best_match_diff < best_match_diff_trans:
+            card.rank = best_match_name
+        else:
+            card.rank = best_match_name_trans
+
+        if card.suit_img == "Covered":
+            card.suit = "Covered"
+        else:
+            card.suit = classify_suit_number(card.suit_img, suit_template)
+
+        # Draw contours on the original image
+        cv2.drawContours(marked_frame, [card.contour], -1, (255, 0, 0), 3)
+        if card.rank == "Covered":
+            # Outline
+            cv2.putText(marked_frame, "Covered", (card.center[0] - 50, card.center[1]), cv2.FONT_HERSHEY_SIMPLEX,
+                        1.2, (0, 0, 0), 16)
+            # Main text
+            cv2.putText(marked_frame, "Covered", (card.center[0] - 50, card.center[1]), cv2.FONT_HERSHEY_SIMPLEX,
+                        1.2, (255, 255, 255), 2)
+        else:
+            # Outline
+            cv2.putText(marked_frame, card.rank, (card.center[0] - 50, card.center[1]), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                        (0, 0, 0), 16)
+            cv2.putText(marked_frame, "of", (card.center[0] - 50, card.center[1] + 30), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                        (0, 0, 0), 16)
+            cv2.putText(marked_frame, card.suit, (card.center[0] - 50, card.center[1] + 60), cv2.FONT_HERSHEY_SIMPLEX,
+                        1, (0, 0, 0), 16)
+            # Main text
+            cv2.putText(marked_frame, card.rank, (card.center[0] - 50, card.center[1]), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                        (255, 255, 255), 2)
+            cv2.putText(marked_frame, "of", (card.center[0] - 50, card.center[1] + 30), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                        (255, 255, 255), 2)
+            cv2.putText(marked_frame, card.suit, (card.center[0] - 50, card.center[1] + 60), cv2.FONT_HERSHEY_SIMPLEX,
+                        1, (255, 255, 255), 2)
+
+    dealer_cards, player_cards = group_cards(cards, input_image)
+    return cards, dealer_cards, player_cards, marked_frame
