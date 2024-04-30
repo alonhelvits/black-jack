@@ -1,6 +1,6 @@
-
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
 class Coin:
     def __init__(self, radius, center, rank):
@@ -41,28 +41,22 @@ def group_coins(coins, image):
     return dealer_coins, [player1_coins, player2_coins]
 
 def detect_coins(image):
-    MIN_COIN_AREA = 1000
-    MAX_COIN_AREA = 10000
     coins = []
 
     # Convert the image to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     # Define the region of interest (ROI) as the lower part of the image
     roi = gray[800:, :]
-
+    blur_roi = cv2.GaussianBlur(roi, (5, 5), 0)
+    blur_roi = cv2.medianBlur(blur_roi, 5)
     # Detect circles using Hough Circle Transform with adjusted parameters
     circles = cv2.HoughCircles(roi, cv2.HOUGH_GRADIENT, dp=1, minDist=50,
                                param1=50, param2=40, minRadius=45, maxRadius=60)
-
-    # Detect circles using Hough Circle Transform with adjusted parameters
-    # circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, dp=1, minDist=50,
-    #                            param1=50, param2=40, minRadius=45, maxRadius=60)
 
     if circles is not None:
         circles = np.round(circles[0, :]).astype("int")
         for (x, y, r) in circles:
             y += 800
-            # Draw the circle and its center
             # Create a mask for the circular ROI
             mask = np.zeros_like(image)
             cv2.circle(mask, (x, y), r, (255, 255, 255), thickness=-1)  # Create a filled circle in the mask
@@ -72,7 +66,6 @@ def detect_coins(image):
 
             # Extract ROI for the circle using the masked image
             roi = masked_image[y - r:y + r, x - r:x + r]
-
             # Calculate average intensity of each channel
             avg_color = np.mean(roi, axis=(0, 1))  # Calculate mean along axis 0 and 1 (height and width)
             avg_color[0] -= 13
@@ -89,14 +82,8 @@ def detect_coins(image):
                 color = "Red"
                 cv2.circle(image, (x, y), r, (0, 0, 255), 4)
                 cv2.circle(image, (x, y), 2, (0, 0, 255), 3)
-
             coins.append(Coin(r, (x, y), color))
 
     dealer_coins, players_coins = group_coins(coins, image)
-
-    # Display the result
-    # cv2.imshow("Detected Circles", image)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
 
     return coins, dealer_coins, players_coins, image

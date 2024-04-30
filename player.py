@@ -225,12 +225,6 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
                         (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 32)
             cv2.putText(game_image, "Betting Phase",
                         (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
-            # cv2.putText(game_image, f"Running count: {running_count}",
-            #             (center_of_image[0] - 270, center_of_image[1] + 90),
-            #             font, 2, (255, 255, 255), 25)
-            # cv2.putText(game_image, f"Running count: {running_count}",
-            #             (center_of_image[0] - 270, center_of_image[1] + 90),
-            #             font, 2, (0, 0, 0), 8)
             cv2.putText(game_image, f"Count: {true_count}",
                         (center_of_image[0] - 180, center_of_image[1] + 180),
                         font, 2, (255, 255, 255), 32)
@@ -318,12 +312,6 @@ def process_game(dealer_cards, players_cards, dealer_coins, players_coins,
                             (center_of_image[0] - 300, center_of_image[1]), font, 3, (255, 255, 255), 32)
                 cv2.putText(game_image, "Betting Phase",
                             (center_of_image[0] - 300, center_of_image[1]), font, 3, (0, 0, 0), 8)
-                # cv2.putText(game_image, f"Running count: {running_count}",
-                #             (center_of_image[0] - 270, center_of_image[1] + 90),
-                #             font, 2, (255, 255, 255), 25)
-                # cv2.putText(game_image, f"Running count: {running_count}",
-                #             (center_of_image[0] - 270, center_of_image[1] + 90),
-                #             font, 2, (0, 0, 0), 8)
                 cv2.putText(game_image, f"Count: {true_count}",
                             (center_of_image[0] - 200, center_of_image[1] + 180),
                             font, 2, (255, 255, 255), 32)

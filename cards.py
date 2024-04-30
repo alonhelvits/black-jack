@@ -48,74 +48,7 @@ class Card:
         self.rank = None
         self.suit = None
 
-#def find_cards(image):
-    #
-    # BKG_THRESH = 25
-    #
-    # # Convert the image to grayscale
-    # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    #
-    # # Apply Gaussian blur
-    # blurred = cv2.medianBlur(gray, 9)
-    # blurred = cv2.GaussianBlur(blurred, (5,5), 0)
-    # #blurred = cv2.bilateralFilter(gray, 11, 13, 13)
-    #
-    # cv2.imshow('blurred', blurred)
-    # cv2.waitKey(1)
-    #
-    # # Perform adaptive thresholding
-    # bkg_level = np.bincount(image.ravel()).argmax()
-    # thresh_level = bkg_level + BKG_THRESH
-    #
-    # retval, thresh = cv2.threshold(blurred, thresh_level, 255, cv2.THRESH_BINARY)
-    #
-    # # plt.figure(figsize=(10, 10))
-    # # plt.imshow(thresh, cmap='gray')
-    # # plt.show()
-    #
-    # # Find contours
-    # #contours, hier = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    # contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    # index_sort = sorted(range(len(contours)), key=lambda i: cv2.contourArea(contours[i]), reverse=True)
-    # if len(contours) == 0:
-    #     return [], []
-    #
-    # contours = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
-    # cards = []
-    #
-    # # Loop over the contours
-    # # Loop over the contours
-    # for contour in contours:
-    #     # Calculate the area of the contour
-    #     area = cv2.contourArea(contour)
-    #
-    #     # Adjust the area threshold based on the compression ratio
-    #     compressed_area_threshold_lower = 31000 * 0.5 * 0.5  # Assuming compression factor is 0.5
-    #     compressed_area_threshold_upper = 50000 * 0.5 * 0.5  # Assuming compression factor is 0.5
-    #
-    #     # Filter contours based on adjusted area threshold
-    #     if compressed_area_threshold_lower < area < compressed_area_threshold_upper:
-    #         # Approximate the contour to obtain the corners
-    #         peri = cv2.arcLength(contour, True)
-    #         approx = cv2.approxPolyDP(contour, 0.03 * peri, True)
-    #
-    #         # Scale back the contour points to correspond to the original image size
-    #         approx = approx * 2  # Assuming the compression factor is 0.5
-    #
-    #         # Check if the contour has four corners
-    #         if len(approx) == 4:
-    #             # Calculate the center of the card
-    #             average = np.sum(np.float32(approx), axis=0) / len(np.float32(approx))
-    #             cent_x = int(average[0][0])
-    #             cent_y = int(average[0][1])
-    #             center = np.array([cent_x, cent_y])
-    #
-    #             # Find width and height of card's bounding rectangle
-    #             x, y, w, h = cv2.boundingRect(contour)
-    #             card_width, card_height = w, h
-    #
-    #             # Warped image processing
-    #             warped = flattener(image, np.float32(approx), card_width, card_height)
+
 def find_cards(image):
     resize_factor = 0.5
     resize_factor_op = 2
@@ -130,9 +63,6 @@ def find_cards(image):
     # Apply Gaussian blur
     blurred = cv2.medianBlur(gray, 9)
     blurred = cv2.GaussianBlur(blurred, (5, 5), 0)
-
-    # cv2.imshow('blurred', blurred)
-    # cv2.waitKey(1)
 
     # Perform adaptive thresholding
     bkg_level = np.bincount(image.ravel()).argmax()
@@ -197,10 +127,6 @@ def find_cards(image):
                     rank_img = get_rank_suit(Qcorner_zoom_rank, flag="rank")
                     suit_img = get_rank_suit(Qcorner_zoom_suit, flag="suit")
 
-                    # plt.figure(figsize=(10, 10))
-                    # plt.imshow(rank_img, cmap='gray')
-                    # plt.show()
-
                     rank_img_trans = rank_img
                     cards.append(Card(np.float32(approx), center, warped, contour,card_width, card_height,rank_img, rank_img_trans,suit_img, warped))
     return cards
@@ -216,17 +142,10 @@ def get_corner(warped):
     # Grab corner of warped card image and do a 5x zoom
     Qcorner = warped[8:CORNER_HEIGHT_RANK + 8, 0:CORNER_WIDTH_RANK]
     Qcorner_zoom = cv2.resize(Qcorner, (0, 0), fx=4, fy=4)
-    # cv2.imshow('Qcorner_zoom', Qcorner_zoom)
-    # cv2.waitKey(1)
-
-    # plt.figure(figsize=(10, 10))
-    # plt.imshow(Qcorner_zoom, cmap='gray')
-    # plt.show()
 
     Qcorner_suit = warped[CORNER_HEIGHT_SUIT: 2*CORNER_HEIGHT_SUIT - 4, 2 :CORNER_WIDTH_SUIT]
     Qcorner_zoom_suit = cv2.resize(Qcorner_suit, (0, 0), fx=4, fy=4)
-    # cv2.imshow('Qcorner_zoom_suit', Qcorner_zoom_suit)
-    # cv2.waitKey(1)
+
     return Qcorner_zoom, Qcorner_zoom_suit
 
 def get_rank_suit(Qcorner_zoom, flag):
@@ -269,8 +188,6 @@ def get_rank_suit(Qcorner_zoom, flag):
         img = Qrank_sized
     else:
         img = ""
-    # cv2.imshow('rank_img', img)
-    # cv2.waitKey(1)
     return img
 
 def classify_card_number(card_rank_image, rank_templates, warped):
@@ -296,15 +213,7 @@ def classify_card_number(card_rank_image, rank_templates, warped):
             if rank_diff < best_match_diff:
                 best_match_diff = rank_diff
                 best_match_name = rank
-    '''
-    if best_match_name == "Nine" or best_match_name == "Ten" or best_match_name == "Queen":
-        queen_diff_1 = int(np.sum(cv2.absdiff(queen_template_1, warped) / 255))
-        queen_diff_2 = int(np.sum(cv2.absdiff(queen_template_2, warped) / 255))
-        queen_diff_3 = int(np.sum(cv2.absdiff(queen_template_3, warped) / 255))
-        queen_diff_4 = int(np.sum(cv2.absdiff(queen_template_4, warped) / 255))
-        if queen_diff_1 < 38000 or queen_diff_2 < 38000 or queen_diff_3 < 38000 or queen_diff_4 < 38000:
-            best_match_name = "Queen"
-    '''
+
     return best_match_name, best_match_diff
 
 def classify_suit_number(card_suit_image, suit_templates):
@@ -353,7 +262,6 @@ def group_cards(cards, image):
                 player2_cards.append(card.rank)
 
     return dealer_cards, [player1_cards, player2_cards]
-
 
 def flattener(image, pts, w, h):
     """Flattens an image of a card into a top-down 200x300 perspective.
@@ -423,8 +331,6 @@ def flattener(image, pts, w, h):
 
     return warp
 def detect_cards(input_image):
-    # Assume you have an image containing multiple cards called input_image
-    #input_image = cv2.imread('test_image.png')
 
     # Find cards in the input image
     cards = find_cards(input_image)
@@ -474,10 +380,3 @@ def detect_cards(input_image):
 
     dealer_cards, player_cards = group_cards(cards, input_image)
     return cards, dealer_cards, player_cards, marked_frame
-
-    # # Show the marked frame with contours
-    # cv2.imshow('Marked Frame', marked_frame)
-    # cv2.waitKey(1)
-    # # Wait for a key press and close all windows
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
