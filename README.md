@@ -1,6 +1,8 @@
 BlackJack, a popular casino game [1], presents players with the challenge of making strategic decisions to beat the dealer without exceeding a total card value of 21.
+
 Players often face inherent disadvantages due to limited information and the statistically optimized strategies employed by casinos. 
 In our final assignment, we developed the Blackjack ‘Super Assistant’ application - designed to mitigate these challenges through technological innovation.
+
 The assistant uses live video feeds to detect and classify cards and chips. 
 It enhances the player's strategy through a combination of statistical analysis, card counting, and bet suggestions, while tracking the player’s profit over multiple sessions.
 
