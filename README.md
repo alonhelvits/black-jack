@@ -13,5 +13,5 @@ The system operates by analyzing the video input, identifying gaming elements su
 
 This process increases the likelihood of profitability by adapting to changes in the game environment in real-time.
 
-<img width="285" alt="image" src="https://github.com/alonhelvits/black-jack/assets/42146331/9cf4c222-0cfa-46b0-8b59-db6639f3f1e2">
+<img width="570" alt="image" src="https://github.com/alonhelvits/black-jack/assets/42146331/9cf4c222-0cfa-46b0-8b59-db6639f3f1e2">
 
